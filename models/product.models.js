@@ -33,9 +33,29 @@ const getProductBySort = async (sort) => {
   }
 };
 
+const getProductById = async (id) => {
+  try {
+    const query = await db`SELECT * FROM product WHERE id = ${id}`;
+    return query;
+  } catch (error) {
+    return error;
+  }
+};
+
+const getCategory = async () => {
+  try {
+    const query = await db`SELECT DISTINCT category FROM product`;
+    return query;
+  } catch (error) {
+    return error;
+  }
+};
+
 module.exports = {
   getAllProduct,
   getProductByKeyword,
   getProductBySort,
   getProductByCategory,
+  getProductById,
+  getCategory,
 };

@@ -59,6 +59,63 @@ async function getProduct(req, res) {
   }
 }
 
+async function getProductById(req, res) {
+  try {
+    const {
+      params: { id },
+    } = req;
+
+    if (isNaN(id)) {
+      res.status(400).json({
+        status: false,
+        message: "ID must be integer",
+      });
+      return;
+    }
+
+    const query = await model.getProductById(id);
+
+    if (!query.length) {
+      res.status(404).json({
+        status: false,
+        message: "Data not found",
+      });
+      return;
+    }
+
+    res.json({
+      status: true,
+      message: "Get data success",
+      data: query,
+    });
+  } catch (error) {
+    res.status(400).json({
+      status: false,
+      message: "Error not found",
+    });
+  }
+}
+
+async function getCategory(req, res) {
+  try {
+    const data = await model.getCategory();
+
+    res.send({
+      status: true,
+      message: "Success get data",
+      data: data,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      status: false,
+      message: "Internal Server Error",
+    });
+  }
+}
+
 module.exports = {
   getProduct,
+  getProductById,
+  getCategory,
 };
