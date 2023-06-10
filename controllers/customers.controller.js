@@ -10,6 +10,27 @@ function getToken(req) {
   return token;
 }
 
+async function getOnlyCustomer(req, res) {
+  try {
+    const token = getToken(req);
+    const decoded = jwt.verify(token, process.env.PRIVATE_KEY);
+    const id = decoded.id;
+
+    const data = await db`SELECT * FROM customers WHERE user_id = ${id}`;
+
+    res.send({
+      status: true,
+      message: "Success get data",
+      data: data,
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: false,
+      message: "Internal Server Error",
+    });
+  }
+}
+
 async function getCustomer(req, res) {
   try {
     const token = getToken(req);
@@ -65,6 +86,9 @@ async function insertCustomer(req, res) {
       "birthdate",
       "user_id"
     )} returning *`;
+
+    const customerId = data[0].id;
+    await db`UPDATE users SET customer_id = ${customerId} WHERE id = ${id}`;
     res.json({
       status: true,
       message: "Success insert data",
@@ -141,6 +165,7 @@ async function editCustomer(req, res) {
 }
 
 module.exports = {
+  getOnlyCustomer,
   getCustomer,
   insertCustomer,
   editCustomer,

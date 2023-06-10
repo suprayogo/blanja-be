@@ -11,7 +11,8 @@ app.use(bodyParser.json());
 const usersRoutes = require("./routes/users.routes");
 const authUser = require("./routes/auth.routes");
 const productRoutes = require("./routes/product.routes");
-const customerRoutes = require("./routes/customer.router");
+const customerRoutes = require("./routes/customer.routes");
+const addressRoutes = require("./routes/address.routes");
 
 app.use(helmet());
 app.use(cors());
@@ -21,6 +22,7 @@ app.use(usersRoutes);
 app.use(authUser);
 app.use(productRoutes);
 app.use(customerRoutes);
+app.use(addressRoutes);
 
 app.get("/", function (req, res) {
   res.send("Hello World");
