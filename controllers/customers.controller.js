@@ -39,6 +39,109 @@ async function getCustomer(req, res) {
   }
 }
 
+async function insertCustomer(req, res) {
+  try {
+    const { id } = req.user;
+
+    const { gender, birthdate } = req.body;
+
+    if (!(gender && birthdate)) {
+      res.status(400).json({
+        status: false,
+        message: "Bad input, please complete all of fields",
+      });
+      return;
+    }
+
+    const payload = {
+      gender,
+      birthdate,
+      user_id: id,
+    };
+
+    data = await db`INSERT INTO customers ${db(
+      payload,
+      "gender",
+      "birthdate",
+      "user_id"
+    )} returning *`;
+    res.json({
+      status: true,
+      message: "Success insert data",
+      data: data,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      status: false,
+      message: "Internal Server Error",
+    });
+  }
+}
+
+async function editCustomer(req, res) {
+  try {
+    const { id } = req.user;
+    const { gender, birthdate, full_name } = req.body;
+
+    const checkDataUser =
+      await db`SELECT full_name FROM users WHERE users.id = ${id}`;
+    const checkDataCustomer =
+      await db`SELECT * FROM customers WHERE customers.user_id = ${id}`;
+
+    if (!(checkDataCustomer.length && checkDataUser.length)) {
+      res.status(404).json({
+        status: false,
+        message: "data not found, please insert customer data",
+      });
+      return;
+    }
+
+    const payloadUsers = {
+      full_name: full_name ?? checkDataUser[0].full_name,
+    };
+
+    const payloadCustomers = {
+      gender: gender ?? checkDataCustomer[0].gender,
+      birthdate: birthdate ?? checkDataCustomer[0].birthdate,
+    };
+
+    if (full_name) {
+      data = await db`UPDATE users SET ${db(
+        payloadUsers,
+        "full_name"
+      )} WHERE id = ${id} returning *`;
+    }
+
+    if (gender) {
+      data = await db`UPDATE customers SET ${db(
+        payloadCustomers,
+        "gender"
+      )} WHERE user_id = ${id} returning *`;
+    }
+
+    if (birthdate) {
+      data = await db`UPDATE customers SET ${db(
+        payloadCustomers,
+        "birthdate"
+      )} WHERE user_id = ${id} returning *`;
+    }
+
+    res.json({
+      status: true,
+      message: "Success Edit data",
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      status: false,
+      message: "Internal Server Error",
+    });
+  }
+}
+
 module.exports = {
   getCustomer,
+  insertCustomer,
+  editCustomer,
 };
