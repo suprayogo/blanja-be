@@ -23,6 +23,18 @@ const getProductByCategory = async (category, sort) => {
     return error;
   }
 };
+
+const getProductByKeywordCategory = async (keyword, category, sort) => {
+  try {
+    const query = await db`SELECT *, count(*) OVER() as full_count FROM product 
+      WHERE LOWER(product.product_name) ILIKE LOWER(${keyword}) AND 
+      LOWER(product.category) LIKE LOWER(${category}) 
+      ORDER BY "date_created" ${sort}`;
+    return query;
+  } catch (error) {
+    return error;
+  }
+};
 const getProductBySort = async (sort) => {
   try {
     const query =
@@ -54,6 +66,7 @@ const getCategory = async () => {
 module.exports = {
   getAllProduct,
   getProductByKeyword,
+  getProductByKeywordCategory,
   getProductBySort,
   getProductByCategory,
   getProductById,

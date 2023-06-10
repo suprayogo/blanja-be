@@ -24,10 +24,15 @@ async function getProduct(req, res) {
       sort = db`DESC LIMIT 15 OFFSET ${15 * (parseInt(req?.query?.page) - 1)}`;
     }
 
-    if (req?.query?.keyword) {
-      query = await model.getProductByKeyword(keyword, sort);
+    // ketika memasukkan keyword
+    if (req?.query?.keyword && req?.query?.category) {
+      query = await model.getProductByKeywordCategory(keyword, category, sort);
+      // ketika memasukkan category
     } else if (req?.query?.category) {
       query = await model.getProductByCategory(category, sort);
+      // ketika memasukkan keyword dan kategory maka data yang muncul adalah dari keyword dan category
+    } else if (req?.query?.keyword) {
+      query = await model.getProductByKeyword(keyword, sort);
     } else {
       query = await model.getProductBySort(sort);
     }
