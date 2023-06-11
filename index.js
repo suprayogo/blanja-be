@@ -10,6 +10,10 @@ app.use(bodyParser.json());
 
 const usersRoutes = require("./routes/users.routes");
 const authUser = require("./routes/auth.routes");
+const productRoutes = require("./routes/product.routes");
+const customerRoutes = require("./routes/customer.routes");
+const addressRoutes = require("./routes/address.routes");
+const reviewRoutes = require("./routes/review.routes");
 
 app.use(helmet());
 app.use(cors());
@@ -17,6 +21,10 @@ app.use(xss());
 
 app.use(usersRoutes);
 app.use(authUser);
+app.use(productRoutes);
+app.use(customerRoutes);
+app.use(addressRoutes);
+app.use(reviewRoutes);
 
 app.get("/", function (req, res) {
   res.send("Hello World");

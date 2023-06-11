@@ -3,14 +3,14 @@ const usersController = require("../controllers/users.controller");
 
 const middleware = require("../middleware/jwt.middleware");
 
-router.get("/profile", middleware, usersController.getUsers);
+router.get("/users", middleware, usersController.getUsers);
 
-router.get("/profile/", middleware, usersController.getProfileById);
+router.get("/users/", middleware, usersController.getProfileById);
 
-router.post("/profile", usersController.insertUsers);
+router.post("/users/register", usersController.insertUsers);
 
-router.patch("/profile", middleware, usersController.editUsers);
+router.patch("/users", middleware, usersController.editUsers);
 
-router.delete("/profile", middleware, usersController.deleteUsers);
+router.delete("/users", middleware, usersController.deleteUsers);
 
 module.exports = router;
