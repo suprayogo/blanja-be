@@ -22,10 +22,21 @@ async function getUsers(req, res) {
 
     const data = await model.getProfileById(id);
 
+    // Check if the user is a customer or a seller based on the roles_id
+    const user_type =
+      data[0].roles_id === 1
+        ? "customer"
+        : data[0].roles_id === 2
+        ? "seller"
+        : "unknown";
+
     res.send({
       status: true,
       message: "Success get data",
-      data: data,
+      data: {
+        ...data[0], // Access the nested user data object
+        user_type, // Add the user_type field to the response
+      },
     });
   } catch (error) {
     res.status(500).json({
@@ -117,7 +128,7 @@ async function registerUser(req, res, role, name_store = null) {
     if (!(user_name && user_password && user_email && user_phonenumber)) {
       res.status(400).json({
         status: false,
-        message: "Bad input, please complete all of fields",
+        message: "Bad input, please complete all fields",
       });
       return;
     }
@@ -164,6 +175,22 @@ async function registerUser(req, res, role, name_store = null) {
       message: "Server error",
     });
   }
+}
+
+async function registerCustomer(req, res) {
+  await registerUser(req, res, 1);
+}
+
+async function registerSeller(req, res) {
+  const { name_store } = req.body;
+  if (!name_store) {
+    res.status(400).json({
+      status: false,
+      message: "Bad input, please provide a name_store",
+    });
+    return;
+  }
+  await registerUser(req, res, 2, name_store);
 }
 
 async function registerCustomer(req, res) {
