@@ -9,9 +9,9 @@ const getAllUser = async (id) => {
   }
 };
 
-const getProfileById = async (id) => {
+const getProfileById = async (user_id) => {
   try {
-    const query = await db`SELECT * FROM users WHERE id = ${id}`;
+    const query = await db`SELECT * FROM users WHERE user_id = ${user_id}`;
     return query;
   } catch (error) {
     return error;
@@ -33,10 +33,11 @@ const insertProfile = async (payload) => {
   try {
     const query = await db`INSERT INTO users ${db(
       payload,
-      "email",
-      "full_name",
-      "phone_number",
-      "password"
+      "user_name",
+      "user_password",
+      "user_email",
+      "user_phonenumber",
+      "roles_id"
     )} returning *`;
     return query;
   } catch (error) {
@@ -44,24 +45,26 @@ const insertProfile = async (payload) => {
   }
 };
 
-const editProfile = async (payload, id) => {
+const editProfile = async (payload, user_id) => {
   try {
     const query = await db`UPDATE users SET ${db(
       payload,
-      "email",
-      "full_name",
-      "phone_number",
-      "password"
-    )} WHERE id = ${id} returning *`;
+      "user_name",
+      "user_password",
+      "user_email",
+      "user_phonenumber",
+      "gender",
+      "date_of_birth"
+    )} WHERE user_id = ${user_id} returning *`;
     return query;
   } catch (error) {
     return error;
   }
 };
 
-const deleteProfile = async (id) => {
+const deleteProfile = async (user_id) => {
   try {
-    const query = await db`DELETE FROM users WHERE id = ${id} returning *`;
+    const query = await db`DELETE FROM users WHERE user_id = ${user_id}`;
     return query;
   } catch (error) {
     return error;

@@ -4,6 +4,8 @@ const bcrypt = require("bcrypt");
 const saltRounds = 10;
 const jwt = require("jsonwebtoken");
 
+const cloudinary = require("cloudinary").v2;
+
 function getToken(req) {
   const token = req?.headers?.authorization?.slice(
     7,
@@ -16,7 +18,7 @@ async function getUsers(req, res) {
   try {
     const token = getToken(req);
     const decoded = jwt.verify(token, process.env.PRIVATE_KEY);
-    const id = decoded.id;
+    const id = decoded.user_id;
 
     const data = await model.getProfileById(id);
 
@@ -109,18 +111,21 @@ async function getProfileByEmail(req, res) {
 
 async function insertUsers(req, res) {
   try {
-    const { email, full_name, phone_number, password } = req.body;
+    const { user_name, user_password, user_email, user_phonenumber, roles_id } =
+      req.body;
 
     // validasi input
-    if (!(email && full_name && phone_number && password)) {
+    if (!(user_name && user_password && user_email && user_phonenumber)) {
       res.status(400).json({
         status: false,
         message: "Bad input, please complete all of fields",
       });
       return;
     }
+
     // check if email already exists in the database
-    const emailExists = await model.getProfileByEmail(email);
+    const emailExists =
+      await db`SELECT * FROM users WHERE LOWER(user_email) = LOWER(${user_email})`;
 
     if (emailExists.length > 0) {
       res.status(400).json({
@@ -131,19 +136,20 @@ async function insertUsers(req, res) {
     }
 
     const payload = {
-      email,
-      full_name,
-      phone_number,
-      password,
+      user_name,
+      user_password,
+      user_email,
+      user_phonenumber,
+      roles_id,
     };
 
     let query;
     bcrypt.genSalt(
       saltRounds,
       await function (err, salt) {
-        bcrypt.hash(password, salt, function (err, hash) {
+        bcrypt.hash(user_password, salt, function (err, hash) {
           // Store hash in your password DB.
-          query = model.insertProfile({ ...payload, password: hash });
+          query = model.insertProfile({ ...payload, user_password: hash });
         });
       }
     );
@@ -165,21 +171,28 @@ async function editUsers(req, res) {
     jwt.verify(
       getToken(req),
       process.env.PRIVATE_KEY,
-      async function (err, { id }) {
+      async function (err, { user_id }) {
         const {
-          body: { email, full_name, phone_number, password },
+          body: {
+            user_name,
+            user_password,
+            user_email,
+            user_phonenumber,
+            gender,
+            date_of_birth,
+          },
         } = req;
-        if (isNaN(id)) {
+
+        if (isNaN(user_id)) {
           res.status(400).json({
             status: false,
             message: "ID must be integer",
           });
-
           return;
         }
 
-        const checkData = await model.getProfileById(id);
-        console.log(checkData);
+        const checkData =
+          await db`SELECT * FROM users WHERE user_id = ${user_id}`;
 
         if (!checkData.length) {
           res.status(404).json({
@@ -190,32 +203,42 @@ async function editUsers(req, res) {
         }
 
         const payload = {
-          email: email !== undefined ? email : checkData[0].email,
-          full_name:
-            full_name !== undefined ? full_name : checkData[0].full_name,
-          phone_number:
-            phone_number !== undefined
-              ? phone_number
-              : checkData[0].phone_number,
-          password: password !== undefined ? password : checkData[0].password,
+          user_name:
+            user_name !== undefined ? user_name : checkData[0].user_name,
+          user_password:
+            user_password !== undefined
+              ? user_password
+              : checkData[0].user_password,
+          user_email:
+            user_email !== undefined ? user_email : checkData[0].user_email,
+          user_phonenumber:
+            user_phonenumber !== undefined
+              ? user_phonenumber
+              : checkData[0].user_phonenumber,
+          gender: gender !== undefined ? gender : checkData[0].gender,
+          date_of_birth:
+            date_of_birth !== undefined
+              ? date_of_birth
+              : checkData[0].date_of_birth,
         };
 
+        console.log(payload);
+
         let query;
-        if (password) {
+        if (user_password) {
           bcrypt.genSalt(
             saltRounds,
             await function (err, salt) {
-              bcrypt.hash(password, salt, async function (err, hash) {
-                // Store hash in your password DB.
+              bcrypt.hash(user_password, salt, async function (err, hash) {
                 query = await model.editProfile(
-                  { ...payload, password: hash },
-                  id
+                  { ...payload, user_password: hash },
+                  user_id
                 );
               });
             }
           );
         } else {
-          query = await model.editProfile(payload, id);
+          query = await model.editProfile(payload, user_id);
         }
         res.send({
           status: true,
@@ -237,15 +260,15 @@ async function deleteUsers(req, res) {
     jwt.verify(
       getToken(req),
       process.env.PRIVATE_KEY,
-      async function (err, { id }) {
-        if (isNaN(id)) {
+      async function (err, { user_id }) {
+        if (isNaN(user_id)) {
           res.status(400).json({
             status: false,
             message: "ID must be integer",
           });
           return;
         }
-        const checkData = await model.getProfileById(id);
+        const checkData = await model.getProfileById(user_id);
 
         if (!checkData.length) {
           res.status(404).json({
@@ -256,7 +279,7 @@ async function deleteUsers(req, res) {
           return;
         }
 
-        const query = await model.deleteProfile(id);
+        const query = await db`DELETE FROM users WHERE user_id = ${user_id}`;
 
         res.send({
           status: true,
@@ -272,6 +295,86 @@ async function deleteUsers(req, res) {
     });
   }
 }
+
+async function editUsersPhoto(req, res) {
+  try {
+    jwt.verify(
+      getToken(req),
+      process.env.PRIVATE_KEY,
+      async (err, { user_id }) => {
+        const { user_photo } = req?.files ?? {};
+
+        if (!user_photo) {
+          res.status(400).send({
+            status: false,
+            message: "Photo is required",
+          });
+        }
+
+        let mimeType = user_photo.mimetype.split("/")[1];
+        let allowFile = ["jpeg", "jpg", "png", "webp"];
+        if (!allowFile?.find((item) => item === mimeType)) {
+          res.status(400).send({
+            status: false,
+            message: "Only accept jpeg, jpg, png, webp",
+          });
+          return;
+        }
+
+        // validate size image
+        if (user_photo.size > 2000000) {
+          res.status(400).send({
+            status: false,
+            message: "File to big, max size 2MB",
+          });
+          return;
+        }
+
+        cloudinary.config({
+          cloud_name: process.env.CLOUDINARY_NAME,
+          api_key: process.env.CLODUNARY_KEY,
+          api_secret: process.env.CLOUDINARY_SECRET,
+        });
+
+        const upload = cloudinary.uploader.upload(user_photo.tempFilePath, {
+          public_id: new Date().toISOString(),
+        });
+
+        upload
+          .then(async (data) => {
+            const payload = {
+              user_photo: data?.secure_url,
+            };
+
+            await db`UPDATE users set ${db(
+              payload,
+              "user_photo"
+            )} WHERE user_id = ${user_id} returning *`;
+
+            res.status(200).send({
+              status: true,
+              message: "Success upload",
+              data: payload,
+            });
+          })
+          .catch((err) => {
+            res.status(400).send({
+              status: false,
+              message: err,
+            });
+          });
+      }
+    );
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).send({
+      status: false,
+      message: "Error on server",
+    });
+  }
+}
+
 module.exports = {
   getUsers,
   getProfileById,
@@ -279,4 +382,5 @@ module.exports = {
   insertUsers,
   editUsers,
   deleteUsers,
+  editUsersPhoto,
 };
