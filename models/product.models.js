@@ -14,6 +14,18 @@ const getProductByKeyword = async (keyword, sort) => {
     return error;
   }
 };
+
+const getProductByReview = async () => {
+  try {
+    const query =
+      await db`SELECT COALESCE(ROUND(AVG(product_review.review_score),1),0) AS score, product.* 
+      FROM product LEFT JOIN product_review ON product_review.product_id = product.product_id 
+      GROUP BY product.product_id ORDER BY score DESC`;
+    return query;
+  } catch (error) {
+    return error;
+  }
+};
 const getProductByCategory = async (category, sort) => {
   try {
     const query =
@@ -64,6 +76,7 @@ module.exports = {
   getAllProduct,
   getProductByKeyword,
   getProductByKeywordCategory,
+  getProductByReview,
   getProductBySort,
   getProductByCategory,
   getProductById,

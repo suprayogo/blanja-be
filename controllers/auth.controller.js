@@ -15,25 +15,6 @@ async function loginUser(req, res, role_id) {
       body: { user_email, user_password },
     } = req;
 
-    const emailRegex = /^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$/;
-    if (!emailRegex.test(user_email)) {
-      res.status(400).json({
-        status: false,
-        message: "Invalid email format",
-      });
-      return;
-    }
-    // Validate password complexity
-    const passwordRegex =
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-    if (!passwordRegex.test(user_password)) {
-      res.status(400).json({
-        status: false,
-        message:
-          "Password must be at least 8 characters long and include at least one uppercase letter, one lowercase letter, one number, and one special character",
-      });
-      return;
-    }
     if (!(user_email && user_password)) {
       res.status(400).json({
         status: false,
