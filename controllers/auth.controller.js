@@ -3,26 +3,41 @@ const model = require("../models/users.models");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
-async function loginUser(req, res) {
+async function loginCustomer(req, res) {
+  await loginUser(req, res, 1); // Pass 1 as the role_id for customers
+}
+async function loginSeller(req, res) {
+  await loginUser(req, res, 2); // Pass 2 as the role_id for sellers
+}
+async function loginUser(req, res, role_id) {
   try {
-    let role_id = `${req?.query?.role_id}`;
-
     const {
       body: { user_email, user_password },
     } = req;
 
+    const emailRegex = /^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$/;
+    if (!emailRegex.test(user_email)) {
+      res.status(400).json({
+        status: false,
+        message: "Invalid email format",
+      });
+      return;
+    }
+    // Validate password complexity
+    const passwordRegex =
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordRegex.test(user_password)) {
+      res.status(400).json({
+        status: false,
+        message:
+          "Password must be at least 8 characters long and include at least one uppercase letter, one lowercase letter, one number, and one special character",
+      });
+      return;
+    }
     if (!(user_email && user_password)) {
       res.status(400).json({
         status: false,
         message: "Email or Password Can't Be EMPTY",
-      });
-      return;
-    }
-
-    if (role_id !== "1" && role_id !== "2") {
-      res.status(400).json({
-        status: false,
-        message: "Invalid role_id",
       });
       return;
     }
@@ -38,7 +53,7 @@ async function loginUser(req, res) {
       return;
     }
 
-    // // Load hash from your password DB.
+    // Load hash from your password DB.
     bcrypt.compare(
       user_password,
       checkEmail[0]?.user_password,
@@ -74,5 +89,6 @@ async function loginUser(req, res) {
 }
 
 module.exports = {
-  loginUser,
+  loginCustomer,
+  loginSeller,
 };
