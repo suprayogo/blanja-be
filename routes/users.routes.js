@@ -7,7 +7,9 @@ router.get("/users", middleware, usersController.getUsers);
 
 router.get("/users", middleware, usersController.getProfileById);
 
-router.post("/users/register", usersController.insertUsers);
+router.post("/register/customer", usersController.registerCustomer);
+
+router.post("/register/seller", usersController.registerSeller);
 
 router.patch("/users", middleware, usersController.editUsers);
 

@@ -37,7 +37,8 @@ const insertProfile = async (payload) => {
       "user_password",
       "user_email",
       "user_phonenumber",
-      "roles_id"
+      "roles_id",
+      "name_store"
     )} returning *`;
     return query;
   } catch (error) {
