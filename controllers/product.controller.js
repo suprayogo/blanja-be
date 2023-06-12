@@ -11,70 +11,6 @@ function getToken(req) {
   return token;
 }
 
-async function getNewProduct(req, res) {
-  try {
-    data = await db`SELECT p.*, COALESCE(pp.photo_paths, '') AS photo_paths
-      FROM product p
-      LEFT JOIN (
-        SELECT product_id, 
-               CASE 
-                 WHEN COUNT(photo_id) > 1 THEN string_agg(photo_path, ',') 
-                 ELSE NULL 
-               END AS photo_paths
-        FROM product_photo
-        GROUP BY product_id
-      ) pp ON p.product_id = pp.product_id
-      ORDER BY p.date_created DESC;
-    `;
-
-    res.json({
-      status: true,
-      message: "Get data success",
-      data: data,
-    });
-  } catch (error) {
-    console.log(error);
-    res.status(400).json({
-      status: false,
-      message: "Error not found",
-    });
-  }
-}
-
-async function getPopularProduct(req, res) {
-  try {
-    data =
-      await db`SELECT p.*, COALESCE(pp.photo_paths, '') AS photo_paths, COALESCE(pr.review_score, 0) AS review_score
-    FROM product p
-    LEFT JOIN (
-      SELECT product_id, 
-             CASE 
-               WHEN COUNT(photo_id) > 1 THEN string_agg(photo_path, ',') 
-               ELSE NULL 
-             END AS photo_paths
-      FROM product_photo
-      GROUP BY product_id
-    ) pp ON p.product_id = pp.product_id
-    LEFT JOIN (
-      SELECT product_id, AVG(review_score) AS review_score
-      FROM product_review
-      GROUP BY product_id
-    ) pr ON p.product_id = pr.product_id
-    ORDER BY review_score DESC, p.date_created DESC`;
-    res.json({
-      status: true,
-      message: "Get data success",
-      data: data,
-    });
-  } catch (error) {
-    console.log(error);
-    res.status(400).json({
-      status: false,
-      message: "Error not found",
-    });
-  }
-}
-
 async function getProduct(req, res) {
   try {
     var queryParams = "";
@@ -484,8 +420,6 @@ async function deleteProduct(req, res) {
 }
 
 module.exports = {
-  getPopularProduct,
-  getNewProduct,
   getProduct,
   getProductById,
   getCategory,
