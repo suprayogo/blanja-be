@@ -109,12 +109,11 @@ async function getProfileByEmail(req, res) {
   }
 }
 
-async function insertUsers(req, res) {
+async function registerUser(req, res, role, name_store = null) {
   try {
-    const { user_name, user_password, user_email, user_phonenumber, roles_id } =
-      req.body;
+    const { user_name, user_password, user_email, user_phonenumber } = req.body;
 
-    // validasi input
+    // Validate input
     if (!(user_name && user_password && user_email && user_phonenumber)) {
       res.status(400).json({
         status: false,
@@ -123,7 +122,7 @@ async function insertUsers(req, res) {
       return;
     }
 
-    // check if email already exists in the database
+    // Check if email already exists in the database
     const emailExists =
       await db`SELECT * FROM users WHERE LOWER(user_email) = LOWER(${user_email})`;
 
@@ -140,19 +139,20 @@ async function insertUsers(req, res) {
       user_password,
       user_email,
       user_phonenumber,
-      roles_id,
+      roles_id: role,
+      name_store,
     };
 
-    let query;
-    bcrypt.genSalt(
-      saltRounds,
-      await function (err, salt) {
-        bcrypt.hash(user_password, salt, function (err, hash) {
-          // Store hash in your password DB.
-          query = model.insertProfile({ ...payload, user_password: hash });
-        });
-      }
-    );
+    // Generate salt and hash the password
+    const salt = await bcrypt.genSalt(saltRounds);
+    const hash = await bcrypt.hash(user_password, salt);
+
+    // Store the hashed password in the payload
+    payload.user_password = hash;
+
+    // Insert the user into the database
+    const query = await model.insertProfile(payload);
+    console.log(query);
     res.json({
       status: true,
       message: "Success insert data",
@@ -164,6 +164,22 @@ async function insertUsers(req, res) {
       message: "Server error",
     });
   }
+}
+
+async function registerCustomer(req, res) {
+  await registerUser(req, res, 1); // 1 for customer role
+}
+
+async function registerSeller(req, res) {
+  const { name_store } = req.body;
+  if (!name_store) {
+    res.status(400).json({
+      status: false,
+      message: "Bad input, please provide a name_store",
+    });
+    return;
+  }
+  await registerUser(req, res, 2, name_store); // 2 for seller role
 }
 
 async function editUsers(req, res) {
@@ -379,7 +395,8 @@ module.exports = {
   getUsers,
   getProfileById,
   getProfileByEmail,
-  insertUsers,
+  registerCustomer,
+  registerSeller,
   editUsers,
   deleteUsers,
   editUsersPhoto,
