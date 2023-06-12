@@ -15,12 +15,7 @@ router.get("/product/:id", productController.getProductById);
 
 router.get("/category", productController.getCategory);
 
-router.post(
-  "/product",
-  middleware,
-  //   upload.array("photo"),
-  productController.insertProduct
-);
+router.post("/product", middleware, productController.insertProduct);
 
 router.get("/seller/product", middleware, productController.getProductByJwt);
 

@@ -10,7 +10,7 @@ function getToken(req) {
   return token;
 }
 
-async function getOnlyAddress(req, res) {
+async function getAddressJwt(req, res) {
   try {
     const token = getToken(req);
     const decoded = jwt.verify(token, process.env.PRIVATE_KEY);
@@ -195,8 +195,7 @@ async function deleteAddress(req, res) {
   }
 }
 module.exports = {
-  getOnlyAddress,
-
+  getAddressJwt,
   insertAddress,
   editAddress,
   deleteAddress,

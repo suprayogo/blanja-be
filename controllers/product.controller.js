@@ -13,54 +13,61 @@ function getToken(req) {
 
 async function getProduct(req, res) {
   try {
-    var queryParams = "";
-    var selectParams = db`*`;
+    let query;
+    let keyword = `%${req?.query?.keyword}%`;
+    let category = `%${req?.query?.category}%`;
+    let by = `${req?.query?.by}`;
 
-    const { type, category } = req?.query;
+    let sort = db`DESC`;
+    let isPaginate =
+      req?.query?.page &&
+      !isNaN(req?.query?.page) &&
+      parseInt(req?.query?.page) >= 1;
 
-    console.log(type);
-    console.log(category);
+    if (req?.query?.sortType?.toLowerCase() === "asc") {
+      if (isPaginate) {
+        sort = db`ASC LIMIT 15 OFFSET ${15 * (parseInt(req?.query?.page) - 1)}`;
+      } else {
+        sort = db`ASC`;
+      }
+    }
 
-    // type New, Category, Populer,
-    // High heels, Wrist watch, Handbag, Bagpack, Socks, Glasses, Cap, Tie, Dress, Formal suit, Accessoris
-    if (type === "Popular") {
-      queryParams = db`LEFT JOIN product_review ON product_review.product_id = product.product_id
-      GROUP BY product.product_id
-      ORDER BY score DESC`;
-      selectParams = db`SELECT COALESCE(ROUND(AVG(product_review.review_score),1),0) AS score, product.* `;
-    } else if (type === "Category") {
-      queryParams = db`WHERE product_category = ${category}`;
+    if (isPaginate && !req?.query?.sortType) {
+      sort = db`DESC LIMIT 15 OFFSET ${15 * (parseInt(req?.query?.page) - 1)}`;
+    }
+
+    // ketika memasukkan keyword
+    if (req?.query?.keyword && req?.query?.category) {
+      query = await model.getProductByKeywordCategory(keyword, category, sort);
+      // ketika memasukkan category
+    } else if (req?.query?.category) {
+      query = await model.getProductByCategory(category, sort);
+      // ketika memasukkan keyword dan kategory maka data yang muncul adalah dari keyword dan category
+    } else if (req?.query?.keyword) {
+      query = await model.getProductByKeyword(keyword, sort);
+      // ketika memasukkan by dengan review
+    } else if (by === "review") {
+      query = await model.getProductByReview();
     } else {
-      queryParams = db`ORDER BY date_created DESC`;
-    }
-    console.log("asdasd");
-    data = await db`SELECT ${selectParams} FROM product ${queryParams}`;
-
-    if (!data.length) {
-      res.status(404).json({
-        status: false,
-        message: "Data not found",
-      });
-      return;
-    }
-
-    const product_with_photo = [];
-
-    for (const product of data) {
-      const id = product.product_id;
-      const photo_data =
-        await db`SELECT product_photo.photo_path FROM product_photo WHERE product_id = ${id}`;
-      const product_with_photos = {
-        ...product,
-        path: photo_data,
-      };
-      product_with_photo.push(product_with_photos);
+      query = await model.getProductBySort(sort);
     }
 
     res.json({
-      status: true,
-      message: "Get data success",
-      data: product_with_photo,
+      status: query?.length ? true : false,
+      message: query?.length ? "Get data success" : "Data not found",
+      total: query?.length ?? 0,
+      pages: isPaginate
+        ? {
+            current: parseInt(req?.query?.page),
+            total: query?.[0]?.full_count
+              ? Math.ceil(parseInt(query?.[0]?.full_count) / 15)
+              : 0,
+          }
+        : null,
+      data: query?.map((item) => {
+        delete item.full_count;
+        return item;
+      }),
     });
   } catch (error) {
     console.log(error);
