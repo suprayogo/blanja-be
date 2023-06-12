@@ -14,37 +14,9 @@ async function getOnlyAddress(req, res) {
   try {
     const token = getToken(req);
     const decoded = jwt.verify(token, process.env.PRIVATE_KEY);
-    const id = decoded.id;
+    const id = decoded.user_id;
 
     const data = await db`SELECT * FROM address WHERE user_id = ${id}`;
-    res.send({
-      status: true,
-      message: "Success get data",
-      data: data,
-    });
-  } catch (error) {
-    res.status(500).json({
-      status: false,
-      message: "Internal Server Error",
-    });
-  }
-}
-
-async function getAddressData(req, res) {
-  try {
-    const token = getToken(req);
-    const decoded = jwt.verify(token, process.env.PRIVATE_KEY);
-    const id = decoded.id;
-
-    data = await db`SELECT users.email, users.full_name, users.phone_number,
-       customers.gender, customers.birthdate ,
-       address.address_name, address.recipient_name, address.phone_number, address.address_data, 
-       address.postal_code, address.city FROM users 
-       JOIN customers ON users.id = customers.user_id 
-        JOIN address ON users.id = address.user_id
-        WHERE users.id = ${id};
-         `;
-
     res.send({
       status: true,
       message: "Success get data",
@@ -61,11 +33,12 @@ async function getAddressData(req, res) {
 
 async function insertAddress(req, res) {
   try {
-    const { id } = req.user;
+    const { user_id } = req.user;
+
     const {
       address_name,
       recipient_name,
-      phone_number,
+      recipient_phone_number,
       address_data,
       postal_code,
       city,
@@ -76,7 +49,7 @@ async function insertAddress(req, res) {
       !(
         address_name &&
         recipient_name &&
-        phone_number &&
+        recipient_phone_number &&
         address_data &&
         postal_code &&
         city
@@ -92,33 +65,31 @@ async function insertAddress(req, res) {
     const payload = {
       address_name,
       recipient_name,
-      phone_number,
+      recipient_phone_number,
       address_data,
       postal_code,
       city,
-      user_id: id,
+      user_id: user_id,
     };
 
     data = await db`INSERT INTO address ${db(
       payload,
       "address_name",
       "recipient_name",
-      "phone_number",
+      "recipient_phone_number",
       "address_data",
       "postal_code",
       "city",
       "user_id"
     )} returning *`;
 
-    const addressId = data[0].id;
-    console.log(addressId);
-    await db`UPDATE users SET address_id = ${addressId} WHERE id = ${id}`;
     res.json({
       status: true,
       message: "Success insert data",
-      data: query,
+      // data: query,
     });
   } catch (error) {
+    console.log(error);
     res.status(500).json({
       status: false,
       message: "Server error",
@@ -225,7 +196,7 @@ async function deleteAddress(req, res) {
 }
 module.exports = {
   getOnlyAddress,
-  getAddressData,
+
   insertAddress,
   editAddress,
   deleteAddress,

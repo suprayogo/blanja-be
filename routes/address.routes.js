@@ -4,12 +4,6 @@ const middleware = require("../middleware/jwt.middleware");
 
 router.get("/customer/address", middleware, addressController.getOnlyAddress);
 
-router.get(
-  "/customer/address/data",
-  middleware,
-  addressController.getAddressData
-);
-
 router.post("/customer/address", middleware, addressController.insertAddress);
 
 router.patch("/customer/address", middleware, addressController.editAddress);
