@@ -1,11 +1,23 @@
 const model = require("../models/product.models");
 const db = require("../connection");
+const jwt = require("jsonwebtoken");
+const cloudinary = require("cloudinary").v2;
+
+function getToken(req) {
+  const token = req?.headers?.authorization?.slice(
+    7,
+    req?.headers?.authorization?.length
+  );
+  return token;
+}
 
 async function getProduct(req, res) {
   try {
     let query;
     let keyword = `%${req?.query?.keyword}%`;
     let category = `%${req?.query?.category}%`;
+    let by = `${req?.query?.by}`;
+
     let sort = db`DESC`;
     let isPaginate =
       req?.query?.page &&
@@ -33,30 +45,85 @@ async function getProduct(req, res) {
       // ketika memasukkan keyword dan kategory maka data yang muncul adalah dari keyword dan category
     } else if (req?.query?.keyword) {
       query = await model.getProductByKeyword(keyword, sort);
+      // ketika memasukkan by dengan review
+    } else if (by === "review") {
+      query = await model.getProductByReview();
     } else {
       query = await model.getProductBySort(sort);
     }
 
-    console.log(query);
+    const product_with_photo = [];
+
+    for (const product of query) {
+      const product_id = product.product_id;
+      const photo_data =
+        await db`SELECT product_photo.photo_path FROM product_photo WHERE product_id = ${product_id}`;
+      const product_with_photos = {
+        ...product,
+        path: photo_data,
+      };
+      product_with_photo.push(product_with_photos);
+    }
 
     res.json({
-      status: query?.length ? true : false,
-      message: query?.length ? "Get data success" : "Data not found",
-      total: query?.length ?? 0,
+      status: product_with_photo?.length ? true : false,
+      message: product_with_photo?.length
+        ? "Get data success"
+        : "Data not found",
+      total: product_with_photo?.length ?? 0,
       pages: isPaginate
         ? {
             current: parseInt(req?.query?.page),
-            total: query?.[0]?.full_count
-              ? Math.ceil(parseInt(query?.[0]?.full_count) / 15)
+            total: product_with_photo?.[0]?.full_count
+              ? Math.ceil(parseInt(product_with_photo?.[0]?.full_count) / 15)
               : 0,
           }
         : null,
-      data: query?.map((item) => {
+      data: product_with_photo?.map((item) => {
         delete item.full_count;
         return item;
       }),
     });
   } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      status: false,
+      message: "Server error",
+    });
+  }
+}
+
+async function getProductByJwt(req, res) {
+  try {
+    const token = getToken(req);
+    const decoded = jwt.verify(token, process.env.PRIVATE_KEY);
+    const id = decoded.user_id;
+
+    // ketika memasukkan keyword
+
+    const data = await db`SELECT * FROM product
+    WHERE seller_id = ${id}`;
+
+    const product_with_photo = [];
+
+    for (const product of data) {
+      const product_id = product.product_id;
+      const photo_data =
+        await db`SELECT product_photo.photo_path FROM product_photo WHERE product_id = ${product_id}`;
+      const product_with_photos = {
+        ...product,
+        path: photo_data,
+      };
+      product_with_photo.push(product_with_photos);
+    }
+
+    res.json({
+      status: true,
+      message: "Get data success",
+      data: product_with_photo,
+    });
+  } catch (error) {
+    console.log(error);
     res.status(500).json({
       status: false,
       message: "Server error",
@@ -78,9 +145,9 @@ async function getProductById(req, res) {
       return;
     }
 
-    const query = await model.getProductById(id);
+    const data = await db`SELECT * FROM product WHERE product_id = ${id}`;
 
-    if (!query.length) {
+    if (!data.length) {
       res.status(404).json({
         status: false,
         message: "Data not found",
@@ -88,12 +155,26 @@ async function getProductById(req, res) {
       return;
     }
 
+    const product_with_photo = [];
+
+    for (const product of data) {
+      const id = product.product_id;
+      const photo_data =
+        await db`SELECT product_photo.photo_path FROM product_photo WHERE product_id = ${id}`;
+      const product_with_photos = {
+        ...product,
+        path: photo_data,
+      };
+      product_with_photo.push(product_with_photos);
+    }
+
     res.json({
       status: true,
       message: "Get data success",
-      data: query,
+      data: product_with_photo,
     });
   } catch (error) {
+    console.log(error);
     res.status(400).json({
       status: false,
       message: "Error not found",
@@ -119,8 +200,253 @@ async function getCategory(req, res) {
   }
 }
 
+async function insertProduct(req, res) {
+  try {
+    const token = getToken(req);
+    const decoded = jwt.verify(token, process.env.PRIVATE_KEY);
+    const id = decoded.user_id;
+    const role_id = decoded.roles_id;
+
+    if (role_id != 2) {
+      res.status(400).json({
+        status: false,
+        message: "auth seller invalid",
+      });
+      return;
+    }
+
+    const {
+      product_name,
+      product_category,
+      product_price,
+      product_color,
+      product_size,
+      product_condition,
+      product_description,
+    } = req.body;
+
+    const { photo } = req.files;
+
+    if (
+      !(
+        product_name &&
+        product_category &&
+        product_price &&
+        product_color &&
+        product_size &&
+        product_condition &&
+        photo &&
+        product_description
+      )
+    ) {
+      res.status(400).json({
+        status: false,
+        message: "Bad input, please complete all of fields",
+      });
+      return;
+    }
+
+    const payload = {
+      product_name,
+      product_category,
+      product_price,
+      product_color,
+      product_size,
+      product_condition,
+      product_description,
+      seller_id: id,
+    };
+
+    data = await db`INSERT INTO product ${db(
+      payload,
+      "product_name",
+      "product_category",
+      "product_price",
+      "product_color",
+      "product_size",
+      "product_condition",
+      "product_description",
+      "seller_id"
+    )} returning *`;
+
+    const product_id = data[0].product_id;
+    console.log(product_id);
+
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_NAME,
+      api_key: process.env.CLODUNARY_KEY,
+      api_secret: process.env.CLOUDINARY_SECRET,
+    });
+
+    for (let i = 0; i < photo.length; i++) {
+      const photoFile = photo[i];
+      console.log(photoFile.name);
+      const upload = cloudinary.uploader.upload(photoFile.tempFilePath, {
+        public_id: new Date().toISOString(),
+      });
+      upload.then(async (data) => {
+        const payload = {
+          photo_path: data?.secure_url,
+          product_id: product_id,
+        };
+        console.log(payload);
+
+        photo_data = await db`INSERT INTO product_photo ${db(
+          payload,
+          "photo_path",
+          "product_id"
+        )} returning *`;
+        console.log("asd");
+      });
+    }
+
+    res.json({
+      status: true,
+      message: "Success insert data",
+      // data: data,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      status: false,
+      message: "Server error",
+    });
+  }
+}
+
+async function editProduct(req, res) {
+  try {
+    let product_id = `${req?.query?.product_id}`;
+    const token = getToken(req);
+    const decoded = jwt.verify(token, process.env.PRIVATE_KEY);
+    const user_id = decoded.user_id;
+
+    const {
+      product_name,
+      product_category,
+      product_price,
+      product_color,
+      product_size,
+      product_condition,
+    } = req.body;
+
+    if (isNaN(user_id)) {
+      res.status(400).json({
+        status: false,
+        message: "ID must be integer",
+      });
+      return;
+    }
+
+    checkId =
+      await db`SELECT product.seller_id FROM product WHERE product_id = ${product_id}`;
+    console.log(checkId[0].seller_id);
+    console.log(user_id);
+    if (checkId[0].seller_id != user_id) {
+      res.status(404).json({
+        status: false,
+        message: "not your product",
+      });
+      return;
+    }
+
+    checkData =
+      await db`SELECT * FROM product WHERE product_id = ${product_id}`;
+
+    const payload = {
+      product_name: product_name ?? checkData[0].product_name,
+      product_category: product_category ?? checkData[0].product_category,
+      product_price: product_price ?? checkData[0].product_price,
+      product_color: product_color ?? checkData[0].product_color,
+      product_size: product_size ?? checkData[0].product_size,
+      product_condition: product_condition ?? checkData[0].product_condition,
+      seller_id: user_id,
+    };
+
+    const query = await db`UPDATE product SET ${db(
+      payload,
+      "product_name",
+      "product_category",
+      "product_price",
+      "product_color",
+      "product_size",
+      "product_condition",
+      "seller_id"
+    )} WHERE product_id = ${product_id} returning *`;
+    res.send({
+      status: true,
+      message: "Success edit data",
+      data: query,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      status: false,
+      message: "Internal Server Error",
+    });
+  }
+}
+
+async function deleteProduct(req, res) {
+  try {
+    let product_id = `${req?.query?.product_id}`;
+    const token = getToken(req);
+    const decoded = jwt.verify(token, process.env.PRIVATE_KEY);
+    const user_id = decoded.user_id;
+
+    if (isNaN(user_id)) {
+      res.status(400).json({
+        status: false,
+        message: "ID must be integer",
+      });
+      return;
+    }
+
+    checkId =
+      await db`SELECT product.seller_id FROM product WHERE product_id = ${product_id}`;
+    console.log(checkId[0].seller_id);
+    console.log(user_id);
+    if (checkId[0].seller_id != user_id) {
+      res.status(404).json({
+        status: false,
+        message: "not your product",
+      });
+      return;
+    }
+
+    checkData =
+      await db`SELECT * FROM product WHERE product_id = ${product_id}`;
+
+    if (!checkData) {
+      res.status(404).json({
+        status: false,
+        message: "data not found",
+      });
+    }
+
+    const query =
+      await db`DELETE FROM product WHERE product_id = ${product_id} returning *`;
+
+    res.send({
+      status: true,
+      message: "Success delete data",
+      data: query,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      status: false,
+      message: "Internal Server Error",
+    });
+  }
+}
+
 module.exports = {
   getProduct,
   getProductById,
   getCategory,
+  insertProduct,
+  getProductByJwt,
+  editProduct,
+  deleteProduct,
 };

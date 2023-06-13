@@ -2,13 +2,7 @@ const router = require("express").Router();
 const addressController = require("../controllers/address.controller");
 const middleware = require("../middleware/jwt.middleware");
 
-router.get("/customer/address", middleware, addressController.getOnlyAddress);
-
-router.get(
-  "/customer/address/data",
-  middleware,
-  addressController.getAddressData
-);
+router.get("/customer/address", middleware, addressController.getAddressJwt);
 
 router.post("/customer/address", middleware, addressController.insertAddress);
 
