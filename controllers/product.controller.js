@@ -52,19 +52,34 @@ async function getProduct(req, res) {
       query = await model.getProductBySort(sort);
     }
 
+    const product_with_photo = [];
+
+    for (const product of query) {
+      const product_id = product.product_id;
+      const photo_data =
+        await db`SELECT product_photo.photo_path FROM product_photo WHERE product_id = ${product_id}`;
+      const product_with_photos = {
+        ...product,
+        path: photo_data,
+      };
+      product_with_photo.push(product_with_photos);
+    }
+
     res.json({
-      status: query?.length ? true : false,
-      message: query?.length ? "Get data success" : "Data not found",
-      total: query?.length ?? 0,
+      status: product_with_photo?.length ? true : false,
+      message: product_with_photo?.length
+        ? "Get data success"
+        : "Data not found",
+      total: product_with_photo?.length ?? 0,
       pages: isPaginate
         ? {
             current: parseInt(req?.query?.page),
-            total: query?.[0]?.full_count
-              ? Math.ceil(parseInt(query?.[0]?.full_count) / 15)
+            total: product_with_photo?.[0]?.full_count
+              ? Math.ceil(parseInt(product_with_photo?.[0]?.full_count) / 15)
               : 0,
           }
         : null,
-      data: query?.map((item) => {
+      data: product_with_photo?.map((item) => {
         delete item.full_count;
         return item;
       }),

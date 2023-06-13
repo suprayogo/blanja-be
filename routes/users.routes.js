@@ -11,7 +11,9 @@ router.post("/register/customer", usersController.registerCustomer);
 
 router.post("/register/seller", usersController.registerSeller);
 
-router.patch("/users", middleware, usersController.editUsers);
+router.patch("/edit/customer", middleware, usersController.editCustomer);
+
+router.patch("/edit/seller", middleware, usersController.editSeller);
 
 router.delete("/users", middleware, usersController.deleteUsers);
 
