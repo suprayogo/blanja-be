@@ -209,92 +209,181 @@ async function registerSeller(req, res) {
   await registerUser(req, res, 2, name_store); // 2 for seller role
 }
 
-async function editUsers(req, res) {
-  try {
-    jwt.verify(
-      getToken(req),
-      process.env.PRIVATE_KEY,
-      async function (err, { user_id }) {
-        const {
-          body: {
-            user_name,
-            user_password,
-            user_email,
-            user_phonenumber,
-            gender,
-            date_of_birth,
-          },
-        } = req;
+async function editCustomer(req, res) {
+  {
+    try {
+      jwt.verify(
+        getToken(req),
+        process.env.PRIVATE_KEY,
+        async function (err, { user_id }) {
+          console.log(user_id);
+          const {
+            body: {
+              user_name,
+              user_password,
+              user_email,
+              user_phonenumber,
+              gender,
+              date_of_birth,
+            },
+          } = req;
 
-        if (isNaN(user_id)) {
-          res.status(400).json({
-            status: false,
-            message: "ID must be integer",
+          if (isNaN(user_id)) {
+            res.status(400).json({
+              status: false,
+              message: "ID must be integer",
+            });
+            return;
+          }
+
+          const checkData =
+            await db`SELECT * FROM users WHERE user_id = ${user_id}`;
+
+          if (!checkData.length) {
+            res.status(404).json({
+              status: false,
+              message: "ID not found",
+            });
+            return;
+          }
+
+          const payload = {
+            user_name:
+              user_name !== undefined ? user_name : checkData[0].user_name,
+            user_password:
+              user_password !== undefined
+                ? user_password
+                : checkData[0].user_password,
+            user_email:
+              user_email !== undefined ? user_email : checkData[0].user_email,
+            user_phonenumber:
+              user_phonenumber !== undefined
+                ? user_phonenumber
+                : checkData[0].user_phonenumber,
+            gender: gender !== undefined ? gender : checkData[0].gender,
+            date_of_birth:
+              date_of_birth !== undefined
+                ? date_of_birth
+                : checkData[0].date_of_birth,
+          };
+
+          console.log(payload);
+
+          let query;
+          if (user_password) {
+            bcrypt.genSalt(
+              saltRounds,
+              await function (err, salt) {
+                bcrypt.hash(user_password, salt, async function (err, hash) {
+                  query = await model.editCustomer(
+                    { ...payload, user_password: hash },
+                    user_id
+                  );
+                });
+              }
+            );
+          } else {
+            query = await model.editCustomer(payload, user_id);
+          }
+          res.send({
+            status: true,
+            message: "Success edit data",
+            data: query,
           });
-          return;
         }
+      );
+    } catch (error) {
+      res.status(500).json({
+        status: false,
+        message: "Internal Server Error",
+      });
+    }
+  }
+}
+async function editSeller(req, res) {
+  {
+    try {
+      jwt.verify(
+        getToken(req),
+        process.env.PRIVATE_KEY,
+        async function (err, { user_id }) {
+          const {
+            body: {
+              user_name,
+              user_password,
+              user_email,
+              user_phonenumber,
+              name_store,
+            },
+          } = req;
 
-        const checkData =
-          await db`SELECT * FROM users WHERE user_id = ${user_id}`;
+          if (isNaN(user_id)) {
+            res.status(400).json({
+              status: false,
+              message: "ID must be integer",
+            });
+            return;
+          }
 
-        if (!checkData.length) {
-          res.status(404).json({
-            status: false,
-            message: "ID not found",
+          const checkData =
+            await db`SELECT * FROM users WHERE user_id = ${user_id}`;
+
+          if (!checkData.length) {
+            res.status(404).json({
+              status: false,
+              message: "ID not found",
+            });
+            return;
+          }
+
+          const payload = {
+            user_name:
+              user_name !== undefined ? user_name : checkData[0].user_name,
+            user_password:
+              user_password !== undefined
+                ? user_password
+                : checkData[0].user_password,
+            user_email:
+              user_email !== undefined ? user_email : checkData[0].user_email,
+            user_phonenumber:
+              user_phonenumber !== undefined
+                ? user_phonenumber
+                : checkData[0].user_phonenumber,
+            name_store:
+              name_store !== undefined ? name_store : checkData[0].name_store,
+          };
+
+          console.log(payload);
+
+          let query;
+          if (user_password) {
+            bcrypt.genSalt(
+              saltRounds,
+              await function (err, salt) {
+                bcrypt.hash(user_password, salt, async function (err, hash) {
+                  query = await model.editSeller(
+                    { ...payload, user_password: hash },
+                    user_id
+                  );
+                });
+              }
+            );
+          } else {
+            query = await model.editSeller(payload, user_id);
+          }
+          res.send({
+            status: true,
+            message: "Success edit data",
+            data: query,
           });
-          return;
         }
-
-        const payload = {
-          user_name:
-            user_name !== undefined ? user_name : checkData[0].user_name,
-          user_password:
-            user_password !== undefined
-              ? user_password
-              : checkData[0].user_password,
-          user_email:
-            user_email !== undefined ? user_email : checkData[0].user_email,
-          user_phonenumber:
-            user_phonenumber !== undefined
-              ? user_phonenumber
-              : checkData[0].user_phonenumber,
-          gender: gender !== undefined ? gender : checkData[0].gender,
-          date_of_birth:
-            date_of_birth !== undefined
-              ? date_of_birth
-              : checkData[0].date_of_birth,
-        };
-
-        console.log(payload);
-
-        let query;
-        if (user_password) {
-          bcrypt.genSalt(
-            saltRounds,
-            await function (err, salt) {
-              bcrypt.hash(user_password, salt, async function (err, hash) {
-                query = await model.editProfile(
-                  { ...payload, user_password: hash },
-                  user_id
-                );
-              });
-            }
-          );
-        } else {
-          query = await model.editProfile(payload, user_id);
-        }
-        res.send({
-          status: true,
-          message: "Success edit data",
-          data: query,
-        });
-      }
-    );
-  } catch (error) {
-    res.status(500).json({
-      status: false,
-      message: "Internal Server Error",
-    });
+      );
+    } catch (error) {
+      res.status(500).json({
+        status: false,
+        message: "Internal Server Error",
+      });
+    }
   }
 }
 
@@ -424,7 +513,8 @@ module.exports = {
   getProfileByEmail,
   registerCustomer,
   registerSeller,
-  editUsers,
+  editCustomer,
+  editSeller,
   deleteUsers,
   editUsersPhoto,
 };

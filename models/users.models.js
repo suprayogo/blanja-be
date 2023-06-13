@@ -46,7 +46,7 @@ const insertProfile = async (payload) => {
   }
 };
 
-const editProfile = async (payload, user_id) => {
+const editCustomer = async (payload, user_id) => {
   try {
     const query = await db`UPDATE users SET ${db(
       payload,
@@ -56,6 +56,22 @@ const editProfile = async (payload, user_id) => {
       "user_phonenumber",
       "gender",
       "date_of_birth"
+    )} WHERE user_id = ${user_id} returning *`;
+    return query;
+  } catch (error) {
+    return error;
+  }
+};
+
+const editSeller = async (payload, user_id) => {
+  try {
+    const query = await db`UPDATE users SET ${db(
+      payload,
+      "user_name",
+      "user_password",
+      "user_email",
+      "user_phonenumber",
+      "name_store"
     )} WHERE user_id = ${user_id} returning *`;
     return query;
   } catch (error) {
@@ -76,6 +92,7 @@ module.exports = {
   getProfileById,
   getProfileByEmail,
   insertProfile,
-  editProfile,
+  editSeller,
+  editCustomer,
   deleteProfile,
 };
