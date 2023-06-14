@@ -163,7 +163,9 @@ async function registerUser(req, res, role, name_store = null) {
 
     // Insert the user into the database
     const query = await model.insertProfile(payload);
-    console.log(query);
+    console.log("query", query);
+    console.log("payload", payload);
+
     res.json({
       status: true,
       message: "Success insert data",

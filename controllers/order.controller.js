@@ -17,18 +17,12 @@ async function createOrder(req, res) {
     const token = getToken(req);
     const decoded = jwt.verify(token, process.env.PRIVATE_KEY);
     const id = decoded.user_id;
-    // product yang diklik
-    let product_id = `${req?.query?.product_id}`;
 
-    //yang yang dipilih
-    let product_size = `${req?.query?.product_size}`.toLowerCase(); // convert to lowercase
-    //color yang dipilih
-    let product_color = `${req?.query?.product_color}`.toLowerCase(); // convert to lowercase
+    let product_id = `${req?.query?.product_id}`;
+    let product_size = `${req?.query?.product_size}`;
+    let product_color = `${req?.query?.product_color}`;
     let total_product = `${req?.query?.total_product}`;
 
-<<<<<<< Updated upstream
-    // ngecek size yang dipilih ada apa engga
-=======
     const checkData =
       await db`SELECT product.product_size FROM product WHERE product_id = ${product_id}`;
     if (!checkData.length) {
@@ -37,22 +31,17 @@ async function createOrder(req, res) {
         message: "Product not availabe",
       });
     }
->>>>>>> Stashed changes
     const productSize =
-      await db`SELECT * FROM product WHERE product_id = ${product_id} AND LOWER(product_size) LIKE ${`%${product_size}%`}`; // convert to lowercase
+      await db`SELECT * FROM product WHERE product_id = ${product_id} AND product_size LIKE ${`%${product_size}%`}`;
     if (!productSize.length) {
       return res.status(400).json({
         status: false,
         message: "Product size not found",
       });
     }
-    // ngecek warna yang dipilih ada engga
+
     const productColor =
-<<<<<<< Updated upstream
-      await db`SELECT * FROM product WHERE product_id = ${product_id} AND LOWER(product_color) LIKE ${`%${product_color}%`}`; // convert to lowercase
-=======
       await db`SELECT * FROM product WHERE product_id = ${product_id} AND product_color LIKE ${`%${product_color}%`}`;
->>>>>>> Stashed changes
     if (!productColor.length) {
       return res.status(400).json({
         status: false,
@@ -63,30 +52,16 @@ async function createOrder(req, res) {
     get_product =
       await db`SELECT * FROM product WHERE product_id = ${product_id}`;
 
-    console.log(get_product);
-
     get_address =
       await db`SELECT address.address_id FROM address WHERE user_id = ${id}`;
 
-<<<<<<< Updated upstream
-    get_address =
-      await db`SELECT address.address_id FROM address WHERE user_id = ${id}`;
-
-    const address_ids = get_address.map((address) => address.address_id);
-
-    const seller_id = get_product[0].seller_id;
-    const shipping_price = 50000;
-    const product_price = get_product[0].product_price;
-    const total_price = product_price * total_product + shipping_price;
-=======
     const seller_id = get_product[0].seller_id;
     const address_id = get_address[0].address_id;
     const productPrice = get_product[0].product_price;
 
-    const shipping_price = 50000;
+    const shipping_price = 20000;
 
     const totalPrice = productPrice * total_product + shipping_price;
->>>>>>> Stashed changes
 
     const payload = {
       product_id,
@@ -96,14 +71,8 @@ async function createOrder(req, res) {
       total_product,
       shipping_price: shipping_price,
       seller_id: seller_id,
-<<<<<<< Updated upstream
-      address_id: address_ids.join(", "),
-      total_price: total_price,
-      shipping_price: shipping_price,
-=======
       address_id: address_id,
       total_price: totalPrice,
->>>>>>> Stashed changes
     };
 
     data = await db`INSERT INTO product_order ${db(
@@ -114,13 +83,8 @@ async function createOrder(req, res) {
       "seller_id",
       "product_size",
       "product_color",
-<<<<<<< Updated upstream
-      "address_id",
-      "total_price",
-=======
       "total_price",
       "address_id",
->>>>>>> Stashed changes
       "shipping_price"
     )} returning *`;
 
