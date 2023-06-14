@@ -1,6 +1,8 @@
 const db = require("../connection");
+const axios = require("axios");
 
 const jwt = require("jsonwebtoken");
+const midtransClient = require("midtrans-client");
 
 function getToken(req) {
   const token = req?.headers?.authorization?.slice(
@@ -24,7 +26,18 @@ async function createOrder(req, res) {
     let product_color = `${req?.query?.product_color}`.toLowerCase(); // convert to lowercase
     let total_product = `${req?.query?.total_product}`;
 
+<<<<<<< Updated upstream
     // ngecek size yang dipilih ada apa engga
+=======
+    const checkData =
+      await db`SELECT product.product_size FROM product WHERE product_id = ${product_id}`;
+    if (!checkData.length) {
+      return res.status(400).json({
+        status: false,
+        message: "Product not availabe",
+      });
+    }
+>>>>>>> Stashed changes
     const productSize =
       await db`SELECT * FROM product WHERE product_id = ${product_id} AND LOWER(product_size) LIKE ${`%${product_size}%`}`; // convert to lowercase
     if (!productSize.length) {
@@ -35,7 +48,11 @@ async function createOrder(req, res) {
     }
     // ngecek warna yang dipilih ada engga
     const productColor =
+<<<<<<< Updated upstream
       await db`SELECT * FROM product WHERE product_id = ${product_id} AND LOWER(product_color) LIKE ${`%${product_color}%`}`; // convert to lowercase
+=======
+      await db`SELECT * FROM product WHERE product_id = ${product_id} AND product_color LIKE ${`%${product_color}%`}`;
+>>>>>>> Stashed changes
     if (!productColor.length) {
       return res.status(400).json({
         status: false,
@@ -51,6 +68,7 @@ async function createOrder(req, res) {
     get_address =
       await db`SELECT address.address_id FROM address WHERE user_id = ${id}`;
 
+<<<<<<< Updated upstream
     get_address =
       await db`SELECT address.address_id FROM address WHERE user_id = ${id}`;
 
@@ -60,6 +78,15 @@ async function createOrder(req, res) {
     const shipping_price = 50000;
     const product_price = get_product[0].product_price;
     const total_price = product_price * total_product + shipping_price;
+=======
+    const seller_id = get_product[0].seller_id;
+    const address_id = get_address[0].address_id;
+    const productPrice = get_product[0].product_price;
+
+    const shipping_price = 50000;
+
+    const totalPrice = productPrice * total_product + shipping_price;
+>>>>>>> Stashed changes
 
     const payload = {
       product_id,
@@ -67,10 +94,16 @@ async function createOrder(req, res) {
       product_color,
       user_id: id,
       total_product,
+      shipping_price: shipping_price,
       seller_id: seller_id,
+<<<<<<< Updated upstream
       address_id: address_ids.join(", "),
       total_price: total_price,
       shipping_price: shipping_price,
+=======
+      address_id: address_id,
+      total_price: totalPrice,
+>>>>>>> Stashed changes
     };
 
     data = await db`INSERT INTO product_order ${db(
@@ -81,8 +114,13 @@ async function createOrder(req, res) {
       "seller_id",
       "product_size",
       "product_color",
+<<<<<<< Updated upstream
       "address_id",
       "total_price",
+=======
+      "total_price",
+      "address_id",
+>>>>>>> Stashed changes
       "shipping_price"
     )} returning *`;
 
@@ -100,6 +138,116 @@ async function createOrder(req, res) {
   }
 }
 
+async function createPayment(req, res) {
+  try {
+    const token = getToken(req);
+    const decoded = jwt.verify(token, process.env.PRIVATE_KEY);
+    const id = decoded.user_id;
+
+    get_customer = await db`SELECT * FROM users WHERE user_id = ${id}`;
+
+    get_order = await db`SELECT * FROM product_order WHERE user_id = ${id}`;
+
+    get_price =
+      await db`SELECT SUM(CAST(product_order.total_price AS NUMERIC)) as total_price_sum 
+      FROM product_order WHERE user_id = ${id}`;
+
+    totalPayment = get_price[0].total_price_sum;
+
+    const payload = {
+      user_id: id,
+      total_payment: totalPayment,
+    };
+
+    data = await db`INSERT INTO payment ${db(
+      payload,
+      "user_id",
+      "total_payment"
+    )} returning *`;
+
+    get_payment_id =
+      await db`SELECT payment.payment_id FROM payment WHERE user_id= ${id}`;
+    getPaymentId = get_payment_id[0].payment_id;
+
+    let snap = new midtransClient.Snap({
+      // Set to true if you want Production Environment (accept real transaction).
+      isProduction: false,
+      serverKey: process.env.SERVER_KEY,
+    });
+    let parameter = {
+      transaction_details: {
+        order_id: getPaymentId,
+        gross_amount: totalPayment,
+      },
+      customer_details: {
+        first_name: get_customer[0].user_name,
+        email: get_customer[0].user_email,
+        phone: get_customer[0].user_phonenumber,
+      },
+    };
+
+    snap.createTransaction(parameter).then(async (transaction) => {
+      // transaction token
+      let transactionToken = transaction.token;
+      // console.log("transactionToken:", transactionToken);
+      const payload = {
+        transaction_token: transactionToken,
+      };
+
+      data = await db`UPDATE payment SET ${db(
+        payload,
+        "transaction_token"
+      )} returning *`;
+    });
+    res.send({
+      status: true,
+      message: "Success Create payment",
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      status: false,
+      message: "Internal Server Error",
+    });
+  }
+}
+
+async function checkStatus(req, res) {
+  try {
+    const token = getToken(req);
+    const decoded = jwt.verify(token, process.env.PRIVATE_KEY);
+    const id = decoded.user_id;
+    paymentId =
+      await db`SELECT payment.payment_id FROM payment WHERE user_id = ${id}`;
+    payment_id = paymentId[0].payment_id;
+    const url = `https://api.sandbox.midtrans.com/v2/${payment_id}/status`;
+    const response = await axios.get(url, {
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Basic ${Buffer.from(
+          process.env.SERVER_KEY + ":"
+        ).toString("base64")}`,
+      },
+    });
+
+    payment_status = response.data.status_message;
+
+    const payload = {
+      status: payment_status,
+    };
+
+    data = await db`UPDATE payment SET ${db(payload, "status")} returning *`;
+
+    res.status(200).json(response.data);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error fetching order status" });
+  }
+}
+
 module.exports = {
   createOrder,
+  createPayment,
+  checkStatus,
 };
