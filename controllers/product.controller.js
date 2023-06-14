@@ -303,7 +303,7 @@ async function insertProduct(req, res) {
     res.json({
       status: true,
       message: "Success insert data",
-      // data: data,
+      data: data,
     });
   } catch (error) {
     console.log(error);

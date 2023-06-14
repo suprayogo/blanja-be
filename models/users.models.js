@@ -40,6 +40,8 @@ const insertProfile = async (payload) => {
       "roles_id",
       "name_store"
     )} returning *`;
+
+    console.log(query);
     return query;
   } catch (error) {
     return error;
