@@ -162,11 +162,15 @@ async function createPayment(req, res) {
         payload,
         "transaction_token"
       )} returning *`;
+
+      res.send({
+        status: true,
+        message: "Success Create payment",
+        token: transactionToken,
+      });
+      
     });
-    res.send({
-      status: true,
-      message: "Success Create payment",
-    });
+    
   } catch (error) {
     console.log(error);
     res.status(500).json({
