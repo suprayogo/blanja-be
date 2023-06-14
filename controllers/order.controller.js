@@ -97,7 +97,8 @@ async function createOrder(req, res) {
     console.log(error);
     res.status(400).json({
       status: false,
-      message: "Error not found",
+      error: error.message,
+      message: error,
     });
   }
 }
