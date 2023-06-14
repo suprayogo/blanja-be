@@ -71,7 +71,7 @@ async function createOrder(req, res) {
       total_product,
       shipping_price: shipping_price,
       seller_id: seller_id,
-      address_id: address_id,
+      address_id: address_id? address_id: null,
       total_price: totalPrice,
     };
 
@@ -97,8 +97,7 @@ async function createOrder(req, res) {
     console.log(error);
     res.status(400).json({
       status: false,
-      error: error.message,
-      message: error,
+      message: error.message,
     });
   }
 }
