@@ -31,23 +31,23 @@ async function createOrder(req, res) {
         message: "Product not availabe",
       });
     }
-    const productSize =
-      await db`SELECT * FROM product WHERE product_id = ${product_id} AND product_size LIKE ${`%${product_size}%`}`;
-    if (!productSize.length) {
-      return res.status(400).json({
-        status: false,
-        message: "Product size not found",
-      });
-    }
+    // const productSize =
+    //   await db`SELECT * FROM product WHERE product_id = ${product_id} AND product_size LIKE ${`%${product_size}%`}`;
+    // if (!productSize.length) {
+    //   return res.status(400).json({
+    //     status: false,
+    //     message: "Product size not found",
+    //   });
+    // }
 
-    const productColor =
-      await db`SELECT * FROM product WHERE product_id = ${product_id} AND product_color LIKE ${`%${product_color}%`}`;
-    if (!productColor.length) {
-      return res.status(400).json({
-        status: false,
-        message: "Product color not found",
-      });
-    }
+    // const productColor =
+    //   await db`SELECT * FROM product WHERE product_id = ${product_id} AND product_color LIKE ${`%${product_color}%`}`;
+    // if (!productColor.length) {
+    //   return res.status(400).json({
+    //     status: false,
+    //     message: "Product color not found",
+    //   });
+    // }
 
     get_product =
       await db`SELECT * FROM product WHERE product_id = ${product_id}`;
