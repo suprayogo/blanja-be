@@ -55,9 +55,9 @@ async function createOrder(req, res) {
     get_address =
       await db`SELECT address.address_id FROM address WHERE user_id = ${id}`;
 
-    const seller_id = get_product[0].seller_id;
-    const address_id = get_address[0].address_id;
-    const productPrice = get_product[0].product_price;
+    const seller_id = get_product[0]?.seller_id;
+    const address_id = get_address[0]?.address_id;
+    const productPrice = get_product[0]?.product_price;
 
     const shipping_price = 20000;
 
