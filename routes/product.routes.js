@@ -3,11 +3,6 @@ const productController = require("../controllers/product.controller");
 
 const middleware = require("../middleware/jwt.middleware");
 
-const multer = require("multer");
-const upload = multer({
-  dest: "uploads/",
-});
-
 // get all data
 router.get("/product", productController.getProduct);
 
