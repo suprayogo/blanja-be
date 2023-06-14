@@ -104,6 +104,7 @@ async function createOrder(req, res) {
 
 async function createPayment(req, res) {
   try {
+    const totalPaymentBody = req?.body?.total_payment;
     const token = getToken(req);
     const decoded = jwt.verify(token, process.env.PRIVATE_KEY);
     const id = decoded.user_id;
@@ -120,7 +121,7 @@ async function createPayment(req, res) {
 
     const payload = {
       user_id: id,
-      total_payment: totalPayment,
+      total_payment: totalPaymentBody,
     };
 
     data = await db`INSERT INTO payment ${db(
@@ -131,7 +132,7 @@ async function createPayment(req, res) {
 
     get_payment_id =
       await db`SELECT payment.payment_id FROM payment WHERE user_id= ${id}`;
-    getPaymentId = get_payment_id[0].payment_id;
+    getPaymentId = 'CODECRAFTERS' + get_payment_id[0].payment_id;
 
     let snap = new midtransClient.Snap({
       // Set to true if you want Production Environment (accept real transaction).
@@ -141,7 +142,7 @@ async function createPayment(req, res) {
     let parameter = {
       transaction_details: {
         order_id: getPaymentId,
-        gross_amount: totalPayment,
+        gross_amount: totalPaymentBody,
       },
       customer_details: {
         first_name: get_customer[0].user_name,
