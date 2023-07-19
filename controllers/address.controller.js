@@ -1,6 +1,8 @@
 const { query } = require("express");
 const db = require("../connection");
 const jwt = require("jsonwebtoken");
+const model = require("../models/users.models");
+const modelAddress = require("../models/address.models");
 
 function getToken(req) {
   const token = req?.headers?.authorization?.slice(
@@ -14,9 +16,9 @@ async function getAddressJwt(req, res) {
   try {
     const token = getToken(req);
     const decoded = jwt.verify(token, process.env.PRIVATE_KEY);
-    const id = decoded.user_id;
+    const user_id = decoded.user_id;
 
-    const data = await db`SELECT * FROM address WHERE user_id = ${id}`;
+    const data = await modelAddress.getAddress(user_id);
     res.send({
       status: true,
       message: "Success get data",
@@ -72,16 +74,7 @@ async function insertAddress(req, res) {
       user_id: user_id,
     };
 
-    data = await db`INSERT INTO address ${db(
-      payload,
-      "address_name",
-      "recipient_name",
-      "recipient_phone_number",
-      "address_data",
-      "postal_code",
-      "city",
-      "user_id"
-    )} returning *`;
+    data = await modelAddress.insertAddress(payload);
 
     res.json({
       status: true,
@@ -99,7 +92,11 @@ async function insertAddress(req, res) {
 
 async function editAddress(req, res) {
   try {
-    const { id } = req.user;
+    const token = getToken(req);
+    const decoded = jwt.verify(token, process.env.PRIVATE_KEY);
+    const user_id = decoded.user_id;
+    const adds_id = Number(req.body.adds_id);
+    console.log(user_id);
     const {
       address_name,
       recipient_name,
@@ -107,41 +104,85 @@ async function editAddress(req, res) {
       address_data,
       postal_code,
       city,
-    } = req.body;
+    } = req?.body;
 
-    const checkAddress =
-      await db`SELECT * FROM address WHERE address.user_id = ${id}`;
+    // validasi input
 
-    if (!checkAddress.length) {
+    if (address_name.length < 3 || address_name.length > 50) {
+      res.status(400).json({
+        status: false,
+        message: "Address name must be 3-50 characters",
+      });
+      return;
+    }
+
+    if (recipient_name.length < 3 || recipient_name.length > 50) {
+      res.status(400).json({
+        status: false,
+        message: "Recipient name must be 3-50 characters",
+      });
+      return;
+    }
+
+    if (address_data.length < 3 || address_data.length > 50) {
+      res.status(400).json({
+        status: false,
+        message: "Address data must be 3-50 characters",
+      });
+      return;
+    }
+
+    if (phone_number.length < 10 || phone_number.length > 13) {
+      res.status(400).json({
+        status: false,
+        message: "Phone number must be 10-13 digits",
+      });
+      return;
+    }
+    if (postal_code.length < 5 || postal_code.length > 10) {
+      res.status(400).json({
+        status: false,
+        message: "Postal code must be 5-10 digits",
+      });
+      return;
+    }
+
+    const data = await modelAddress.getAddress(user_id, adds_id);
+
+    if (!data.length) {
       res.status(404).json({
         status: false,
-        message: "data not found, please insert adress data",
+        message: "Address not found",
+      });
+      return;
+    }
+
+    const addressIds = data.map((row) => row.address_id);
+    console.log(addressIds);
+
+    if (!addressIds.includes(adds_id)) {
+      res.status(400).json({
+        status: false,
+        message: "Address ID not found",
       });
       return;
     }
 
     const payload = {
-      address_name: address_name ?? checkAddress[0].address_name,
-      recipient_name: recipient_name ?? checkAddress[0].recipient_name,
-      phone_number: phone_number ?? checkAddress[0].phone_number,
-      address_data: address_data ?? checkAddress[0].address_data,
-      postal_code: postal_code ?? checkAddress[0].postal_code,
-      city: city ?? checkAddress[0].city,
+      address_name: address_name,
+      recipient_name: recipient_name,
+      recipient_phone_number: phone_number,
+      address_data: address_data,
+      postal_code: postal_code,
+      city: city,
     };
 
-    data = await db`UPDATE address SET ${db(
-      payload,
-      "address_name",
-      "recipient_name",
-      "phone_number",
-      "address_data",
-      "postal_code",
-      "city"
-    )} WHERE user_id = ${id} returning *`;
+    const query = await modelAddress.editAddress(payload, adds_id, user_id);
 
     res.json({
       status: true,
       message: "Success Edit data",
+      data: query,
     });
   } catch (error) {
     console.log(error);
@@ -154,40 +195,39 @@ async function editAddress(req, res) {
 
 async function deleteAddress(req, res) {
   try {
-    jwt.verify(
-      getToken(req),
-      process.env.PRIVATE_KEY,
-      async function (err, { id }) {
-        if (isNaN(id)) {
-          res.status(400).json({
-            status: false,
-            message: "ID must be integer",
-          });
-          return;
-        }
-        const checkAddress =
-          await db`SELECT * FROM address WHERE address.user_id = ${id}`;
+    const token = getToken(req);
+    const decoded = jwt.verify(token, process.env.PRIVATE_KEY);
+    const user_id = decoded.user_id;
+    const adds_id = Number(req.body.adds_id);
+    console.log(adds_id);
 
-        if (!checkAddress.length) {
-          res.status(404).json({
-            status: false,
-            message: "data not found",
-          });
+    const data = await modelAddress.getAddress(user_id, adds_id);
+    if (!data.length) {
+      res.status(404).json({
+        status: false,
+        message: "Address not found",
+      });
+      return;
+    }
+    const addressIds = data.map((row) => row.address_id);
+    console.log(addressIds);
+    if (!addressIds.includes(adds_id)) {
+      res.status(400).json({
+        status: false,
+        message: "Address ID not found",
+      });
+      return;
+    }
 
-          return;
-        }
+    const query = await modelAddress.deleteAddress(adds_id, user_id);
 
-        const query =
-          await db`DELETE FROM address WHERE user_id = ${id} returning *`;
-
-        res.send({
-          status: true,
-          message: "Success delete data",
-          data: query,
-        });
-      }
-    );
+    res.send({
+      status: true,
+      message: "Success delete data",
+      data: query,
+    });
   } catch (error) {
+    console.log(error);
     res.status(500).json({
       status: false,
       message: "Internal Server Error",

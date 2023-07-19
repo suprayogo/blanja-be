@@ -46,42 +46,42 @@ async function getUsers(req, res) {
   }
 }
 
-async function getProfileById(req, res) {
-  try {
-    const {
-      params: { id },
-    } = req;
+// async function getProfileById(req, res) {
+//   try {
+//     const {
+//       params: { id },
+//     } = req;
 
-    if (isNaN(id)) {
-      res.status(400).json({
-        status: false,
-        message: "ID must be integer",
-      });
-      return;
-    }
+//     if (isNaN(id)) {
+//       res.status(400).json({
+//         status: false,
+//         message: "ID must be integer",
+//       });
+//       return;
+//     }
 
-    const query = await db`SELECT * FROM users WHERE id = ${id}`;
+//     const data = await model.getProfileById(id);
 
-    if (!query.length) {
-      res.status(404).json({
-        status: false,
-        message: "Data not found",
-      });
-      return;
-    }
+//     if (!data.length) {
+//       res.status(404).json({
+//         status: false,
+//         message: "Data not found",
+//       });
+//       return;
+//     }
 
-    res.json({
-      status: true,
-      message: "Get data success",
-      data: query,
-    });
-  } catch (error) {
-    res.status(400).json({
-      status: false,
-      message: "Error not found",
-    });
-  }
-}
+//     res.json({
+//       status: true,
+//       message: "Get data success",
+//       data: data,
+//     });
+//   } catch (error) {
+//     res.status(400).json({
+//       status: false,
+//       message: "Error not found",
+//     });
+//   }
+// }
 
 async function getProfileByEmail(req, res) {
   try {
@@ -134,8 +134,7 @@ async function registerUser(req, res, role, name_store = null) {
     }
 
     // Check if email already exists in the database
-    const emailExists =
-      await db`SELECT * FROM users WHERE LOWER(user_email) = LOWER(${user_email})`;
+    const emailExists = await model.getProfileByEmail(user_email);
 
     if (emailExists.length > 0) {
       res.status(400).json({
@@ -163,8 +162,6 @@ async function registerUser(req, res, role, name_store = null) {
 
     // Insert the user into the database
     const query = await model.insertProfile(payload);
-    console.log("query", query);
-    console.log("payload", payload);
 
     res.json({
       status: true,
@@ -178,11 +175,9 @@ async function registerUser(req, res, role, name_store = null) {
     });
   }
 }
-
 async function registerCustomer(req, res) {
   await registerUser(req, res, 1);
 }
-
 async function registerSeller(req, res) {
   const { name_store } = req.body;
   if (!name_store) {
@@ -194,23 +189,6 @@ async function registerSeller(req, res) {
   }
   await registerUser(req, res, 2, name_store);
 }
-
-async function registerCustomer(req, res) {
-  await registerUser(req, res, 1); // 1 for customer role
-}
-
-async function registerSeller(req, res) {
-  const { name_store } = req.body;
-  if (!name_store) {
-    res.status(400).json({
-      status: false,
-      message: "Bad input, please provide a name_store",
-    });
-    return;
-  }
-  await registerUser(req, res, 2, name_store); // 2 for seller role
-}
-
 async function editCustomer(req, res) {
   {
     try {
@@ -238,13 +216,22 @@ async function editCustomer(req, res) {
             return;
           }
 
-          const checkData =
-            await db`SELECT * FROM users WHERE user_id = ${user_id}`;
+          const checkData = await model.getProfileById(user_id);
 
           if (!checkData.length) {
             res.status(404).json({
               status: false,
               message: "ID not found",
+            });
+            return;
+          }
+
+          const emailExists = await model.getProfileByEmail(user_email);
+
+          if (emailExists.length > 0) {
+            res.status(400).json({
+              status: false,
+              message: "Email still the same or already exists",
             });
             return;
           }
@@ -316,6 +303,7 @@ async function editSeller(req, res) {
               user_email,
               user_phonenumber,
               name_store,
+              store_description,
             },
           } = req;
 
@@ -327,8 +315,7 @@ async function editSeller(req, res) {
             return;
           }
 
-          const checkData =
-            await db`SELECT * FROM users WHERE user_id = ${user_id}`;
+          const checkData = await model.getProfileById(user_id);
 
           if (!checkData.length) {
             res.status(404).json({
@@ -353,6 +340,10 @@ async function editSeller(req, res) {
                 : checkData[0].user_phonenumber,
             name_store:
               name_store !== undefined ? name_store : checkData[0].name_store,
+            store_description:
+              store_description !== undefined
+                ? store_description
+                : checkData[0].store_description,
           };
 
           console.log(payload);
@@ -388,7 +379,6 @@ async function editSeller(req, res) {
     }
   }
 }
-
 async function deleteUsers(req, res) {
   try {
     jwt.verify(
@@ -413,7 +403,7 @@ async function deleteUsers(req, res) {
           return;
         }
 
-        const query = await db`DELETE FROM users WHERE user_id = ${user_id}`;
+        const query = await model.deleteProfile(user_id);
 
         res.send({
           status: true,
@@ -429,7 +419,6 @@ async function deleteUsers(req, res) {
     });
   }
 }
-
 async function editUsersPhoto(req, res) {
   try {
     jwt.verify(
@@ -480,10 +469,7 @@ async function editUsersPhoto(req, res) {
               user_photo: data?.secure_url,
             };
 
-            await db`UPDATE users set ${db(
-              payload,
-              "user_photo"
-            )} WHERE user_id = ${user_id} returning *`;
+            await model.editUsersPhoto(payload, user_id);
 
             res.status(200).send({
               status: true,
@@ -511,7 +497,7 @@ async function editUsersPhoto(req, res) {
 
 module.exports = {
   getUsers,
-  getProfileById,
+  // getProfileById,
   getProfileByEmail,
   registerCustomer,
   registerSeller,

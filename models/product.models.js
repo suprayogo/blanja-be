@@ -1,10 +1,13 @@
-const { query } = require("express");
 const db = require("../connection");
 
 const getAllProduct = async () => {
-  query = db`SELECT * FROM product`;
+  try {
+    const query = await db`SELECT * FROM product`;
+    return query;
+  } catch (error) {
+    return error;
+  }
 };
-
 const getProductByKeyword = async (keyword, sort) => {
   try {
     const query =
@@ -14,7 +17,6 @@ const getProductByKeyword = async (keyword, sort) => {
     return error;
   }
 };
-
 const getProductByReview = async () => {
   try {
     const query =
@@ -63,6 +65,33 @@ const getProductById = async (id) => {
     return error;
   }
 };
+const getProductByProductId = async (product_id) => {
+  try {
+    const query =
+      await db`SELECT * FROM product WHERE product_id = ${product_id}`;
+    return query;
+  } catch (error) {
+    return error;
+  }
+};
+const checkProduct = async (product_id) => {
+  try {
+    const query =
+      await db`SELECT product.seller_id FROM product WHERE product_id = ${product_id}`;
+    return query;
+  } catch (error) {
+    return error;
+  }
+};
+const getPhotoById = async (id) => {
+  try {
+    const query =
+      await db`SELECT product_photo.photo_path FROM product_photo WHERE product_id = ${id}`;
+    return query;
+  } catch (error) {
+    return error;
+  }
+};
 const getCategory = async () => {
   try {
     const query = await db`SELECT DISTINCT product_category FROM product`;
@@ -71,14 +100,98 @@ const getCategory = async () => {
     return error;
   }
 };
+const getPhotoProduct = async (product_id) => {
+  try {
+    const query =
+      await db`SELECT product_photo.photo_path FROM product_photo WHERE product_id = ${product_id}`;
+    return query;
+  } catch (error) {
+    return error;
+  }
+};
+const getProductBySellerId = async (id) => {
+  try {
+    const query = await db`SELECT * FROM product
+    WHERE seller_id = ${id}`;
+    return query;
+  } catch (error) {
+    return error;
+  }
+};
+const insertProductData = async (payload) => {
+  try {
+    const query = await db`INSERT INTO product ${db(
+      payload,
+      "product_name",
+      "product_category",
+      "product_price",
+      "product_color",
+      "product_size",
+      "product_condition",
+      "product_description",
+      "seller_id"
+    )} returning *`;
+    return query;
+  } catch (error) {
+    return error;
+  }
+};
+const insertProductPhoto = async (payload) => {
+  try {
+    const query = await db`INSERT INTO product_photo ${db(
+      payload,
+      "photo_path",
+      "product_id"
+    )} returning *`;
+    return query;
+  } catch (error) {
+    return error;
+  }
+};
+const editProduct = async (payload, product_id) => {
+  try {
+    const query = await db`UPDATE product SET ${db(
+      payload,
+      "product_name",
+      "product_category",
+      "product_price",
+      "product_color",
+      "product_size",
+      "product_condition",
+      "product_description",
+      "seller_id"
+    )} WHERE product_id = ${product_id} returning *`;
+    return query;
+  } catch (error) {
+    return error;
+  }
+};
+const deleteProduct = async (product_id) => {
+  try {
+    const query =
+      await db`DELETE FROM product WHERE product_id = ${product_id} returning *`;
+    return query;
+  } catch (error) {
+    return error;
+  }
+};
 
 module.exports = {
   getAllProduct,
+  checkProduct,
   getProductByKeyword,
   getProductByKeywordCategory,
   getProductByReview,
   getProductBySort,
   getProductByCategory,
   getProductById,
+  getProductByProductId,
   getCategory,
+  getPhotoProduct,
+  getProductBySellerId,
+  getPhotoById,
+  insertProductData,
+  insertProductPhoto,
+  editProduct,
+  deleteProduct,
 };
