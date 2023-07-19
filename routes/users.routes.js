@@ -5,7 +5,7 @@ const middleware = require("../middleware/jwt.middleware");
 
 router.get("/users", middleware, usersController.getUsers);
 
-router.get("/users", middleware, usersController.getProfileById);
+// router.get("/users", middleware, usersController.getProfileById);
 
 router.post("/register/customer", usersController.registerCustomer);
 

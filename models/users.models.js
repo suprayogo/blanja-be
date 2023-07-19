@@ -1,6 +1,6 @@
 const db = require("../connection");
 
-const getAllUser = async (id) => {
+const getAllUser = async () => {
   try {
     const query = db`SELECT * FROM users`;
     return query;
@@ -8,27 +8,24 @@ const getAllUser = async (id) => {
     return error;
   }
 };
-
-const getProfileById = async (user_id) => {
+const getProfileById = async (id) => {
   try {
-    const query = await db`SELECT * FROM users WHERE user_id = ${user_id}`;
+    const query = await db`SELECT * FROM users WHERE user_id = ${id}`;
     return query;
   } catch (error) {
     return error;
   }
 };
-
-const getProfileByEmail = async (email) => {
+const getProfileByEmail = async (user_email) => {
   try {
     const query =
-      await db`SELECT * FROM users WHERE LOWER(email) = LOWER(${email})`;
+      await db`SELECT * FROM users WHERE LOWER(user_email) = LOWER(${user_email})`;
     console.log(query);
     return query;
   } catch (error) {
     return error;
   }
 };
-
 const insertProfile = async (payload) => {
   try {
     const query = await db`INSERT INTO users ${db(
@@ -47,7 +44,6 @@ const insertProfile = async (payload) => {
     return error;
   }
 };
-
 const editCustomer = async (payload, user_id) => {
   try {
     const query = await db`UPDATE users SET ${db(
@@ -64,7 +60,6 @@ const editCustomer = async (payload, user_id) => {
     return error;
   }
 };
-
 const editSeller = async (payload, user_id) => {
   try {
     const query = await db`UPDATE users SET ${db(
@@ -73,14 +68,14 @@ const editSeller = async (payload, user_id) => {
       "user_password",
       "user_email",
       "user_phonenumber",
-      "name_store"
+      "name_store",
+      "store_description"
     )} WHERE user_id = ${user_id} returning *`;
     return query;
   } catch (error) {
     return error;
   }
 };
-
 const deleteProfile = async (user_id) => {
   try {
     const query = await db`DELETE FROM users WHERE user_id = ${user_id}`;
@@ -89,6 +84,18 @@ const deleteProfile = async (user_id) => {
     return error;
   }
 };
+const editUsersPhoto = async (user_id) => {
+  try {
+    const query = await db`UPDATE users set ${db(
+      payload,
+      "user_photo"
+    )} WHERE user_id = ${user_id} returning *`;
+    return query;
+  } catch (error) {
+    return error;
+  }
+};
+
 module.exports = {
   getAllUser,
   getProfileById,
@@ -97,4 +104,5 @@ module.exports = {
   editSeller,
   editCustomer,
   deleteProfile,
+  editUsersPhoto,
 };

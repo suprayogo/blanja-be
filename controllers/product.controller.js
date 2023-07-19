@@ -56,8 +56,7 @@ async function getProduct(req, res) {
 
     for (const product of query) {
       const product_id = product.product_id;
-      const photo_data =
-        await db`SELECT product_photo.photo_path FROM product_photo WHERE product_id = ${product_id}`;
+      const photo_data = await model.getPhotoProduct(product_id);
       const product_with_photos = {
         ...product,
         path: photo_data,
@@ -98,18 +97,16 @@ async function getProductByJwt(req, res) {
     const token = getToken(req);
     const decoded = jwt.verify(token, process.env.PRIVATE_KEY);
     const id = decoded.user_id;
+    console.log(id);
 
-    // ketika memasukkan keyword
-
-    const data = await db`SELECT * FROM product
-    WHERE seller_id = ${id}`;
+    const data = await model.getProductBySellerId(id);
+    console.log(data);
 
     const product_with_photo = [];
 
     for (const product of data) {
       const product_id = product.product_id;
-      const photo_data =
-        await db`SELECT product_photo.photo_path FROM product_photo WHERE product_id = ${product_id}`;
+      const photo_data = await model.getPhotoProduct(product_id);
       const product_with_photos = {
         ...product,
         path: photo_data,
@@ -145,7 +142,7 @@ async function getProductById(req, res) {
       return;
     }
 
-    const data = await db`SELECT * FROM product WHERE product_id = ${id}`;
+    const data = await model.getProductById(id);
 
     if (!data.length) {
       res.status(404).json({
@@ -159,8 +156,7 @@ async function getProductById(req, res) {
 
     for (const product of data) {
       const id = product.product_id;
-      const photo_data =
-        await db`SELECT product_photo.photo_path FROM product_photo WHERE product_id = ${id}`;
+      const photo_data = await model.getPhotoById(id);
       const product_with_photos = {
         ...product,
         path: photo_data,
@@ -227,6 +223,8 @@ async function insertProduct(req, res) {
 
     const { photo } = req.files;
 
+    console.log(photo);
+
     if (
       !(
         product_name &&
@@ -257,17 +255,7 @@ async function insertProduct(req, res) {
       seller_id: id,
     };
 
-    data = await db`INSERT INTO product ${db(
-      payload,
-      "product_name",
-      "product_category",
-      "product_price",
-      "product_color",
-      "product_size",
-      "product_condition",
-      "product_description",
-      "seller_id"
-    )} returning *`;
+    data = await model.insertProductData(payload);
 
     const product_id = data[0].product_id;
     console.log(product_id);
@@ -291,12 +279,7 @@ async function insertProduct(req, res) {
         };
         console.log(payload);
 
-        photo_data = await db`INSERT INTO product_photo ${db(
-          payload,
-          "photo_path",
-          "product_id"
-        )} returning *`;
-        console.log("asd");
+        photo_data = await model.insertProductPhoto(payload);
       });
     }
 
@@ -328,7 +311,10 @@ async function editProduct(req, res) {
       product_color,
       product_size,
       product_condition,
+      product_description,
     } = req.body;
+
+    console.log(product_description);
 
     if (isNaN(user_id)) {
       res.status(400).json({
@@ -338,10 +324,18 @@ async function editProduct(req, res) {
       return;
     }
 
-    checkId =
-      await db`SELECT product.seller_id FROM product WHERE product_id = ${product_id}`;
-    console.log(checkId[0].seller_id);
-    console.log(user_id);
+    checkData = await model.getProductByProductId(product_id);
+    console.log(checkData);
+
+    if (!checkData.length) {
+      res.status(404).json({
+        status: false,
+        message: "Data not found",
+      });
+      return;
+    }
+
+    checkId = await model.checkProduct(product_id);
     if (checkId[0].seller_id != user_id) {
       res.status(404).json({
         status: false,
@@ -350,9 +344,6 @@ async function editProduct(req, res) {
       return;
     }
 
-    checkData =
-      await db`SELECT * FROM product WHERE product_id = ${product_id}`;
-
     const payload = {
       product_name: product_name ?? checkData[0].product_name,
       product_category: product_category ?? checkData[0].product_category,
@@ -360,19 +351,12 @@ async function editProduct(req, res) {
       product_color: product_color ?? checkData[0].product_color,
       product_size: product_size ?? checkData[0].product_size,
       product_condition: product_condition ?? checkData[0].product_condition,
+      product_description:
+        product_description ?? checkData[0].product_description,
       seller_id: user_id,
     };
 
-    const query = await db`UPDATE product SET ${db(
-      payload,
-      "product_name",
-      "product_category",
-      "product_price",
-      "product_color",
-      "product_size",
-      "product_condition",
-      "seller_id"
-    )} WHERE product_id = ${product_id} returning *`;
+    const query = await model.editProduct(payload, product_id);
     res.send({
       status: true,
       message: "Success edit data",
@@ -402,8 +386,7 @@ async function deleteProduct(req, res) {
       return;
     }
 
-    checkId =
-      await db`SELECT product.seller_id FROM product WHERE product_id = ${product_id}`;
+    checkId = await model.checkProduct(product_id);
     console.log(checkId[0].seller_id);
     console.log(user_id);
     if (checkId[0].seller_id != user_id) {
@@ -414,8 +397,7 @@ async function deleteProduct(req, res) {
       return;
     }
 
-    checkData =
-      await db`SELECT * FROM product WHERE product_id = ${product_id}`;
+    checkData = await model.checkProduct(product_id);
 
     if (!checkData) {
       res.status(404).json({
@@ -424,8 +406,7 @@ async function deleteProduct(req, res) {
       });
     }
 
-    const query =
-      await db`DELETE FROM product WHERE product_id = ${product_id} returning *`;
+    const query = await model.deleteProduct(product_id);
 
     res.send({
       status: true,

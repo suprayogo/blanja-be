@@ -1,8 +1,14 @@
 const db = require("../connection");
 const axios = require("axios");
+const model = require("../models/product.models");
+const modelAddress = require("../models/address.models");
+const modelOrder = require("../models/order.models");
+const modelUser = require("../models/users.models");
+const modelProduct = require("../models/product.models");
 
 const jwt = require("jsonwebtoken");
 const midtransClient = require("midtrans-client");
+const { r } = require("tar");
 
 function getToken(req) {
   const token = req?.headers?.authorization?.slice(
@@ -16,77 +22,104 @@ async function createOrder(req, res) {
   try {
     const token = getToken(req);
     const decoded = jwt.verify(token, process.env.PRIVATE_KEY);
-    const id = decoded.user_id;
+    const user_id = decoded.user_id;
 
-    let product_id = `${req?.query?.product_id}`;
-    let product_size = `${req?.query?.product_size}`;
-    let product_color = `${req?.query?.product_color}`;
-    let total_product = `${req?.query?.total_product}`;
+    const { product_id, product_size, product_color, total_product } = req.body;
 
-    const checkData =
-      await db`SELECT product.product_size FROM product WHERE product_id = ${product_id}`;
-    if (!checkData.length) {
+    if (!product_id || !product_size || !product_color || !total_product) {
+      return res.status(400).json({
+        status: false,
+        message: "All field must be filled",
+      });
+    }
+
+    const address_id = Number(req.body.address_id);
+
+    const getProduct = await model.getProductByProductId(product_id);
+
+    if (!getProduct.length) {
       return res.status(400).json({
         status: false,
         message: "Product not availabe",
       });
     }
-    // const productSize =
-    //   await db`SELECT * FROM product WHERE product_id = ${product_id} AND product_size LIKE ${`%${product_size}%`}`;
-    // if (!productSize.length) {
-    //   return res.status(400).json({
-    //     status: false,
-    //     message: "Product size not found",
-    //   });
-    // }
 
-    // const productColor =
-    //   await db`SELECT * FROM product WHERE product_id = ${product_id} AND product_color LIKE ${`%${product_color}%`}`;
-    // if (!productColor.length) {
-    //   return res.status(400).json({
-    //     status: false,
-    //     message: "Product color not found",
-    //   });
-    // }
+    if (!getProduct[0].product_size.includes(product_size)) {
+      return res.status(400).json({
+        status: false,
+        message: "Product size not availabe",
+      });
+    }
 
-    get_product =
-      await db`SELECT * FROM product WHERE product_id = ${product_id}`;
+    const productColor = getProduct[0].product_color.toLowerCase();
+    if (!productColor.includes(product_color.toLowerCase())) {
+      return res.status(400).json({
+        status: false,
+        message: "Product color not available",
+      });
+    }
 
-    get_address =
-      await db`SELECT address.address_id FROM address WHERE user_id = ${id}`;
+    if (total_product < 0) {
+      return res.status(400).json({
+        status: false,
+        message: "Total product must be greater than 0",
+      });
+    }
 
+    get_address = await modelAddress.getAddress(user_id);
+
+    if (!get_address.length) {
+      return res.status(400).json({
+        status: false,
+        message: "Address not found",
+      });
+    }
+
+    const productSize =
+      await db`SELECT * FROM product WHERE product_id = ${product_id} AND product_size LIKE ${`%${product_size}%`}`;
+    if (!productSize.length) {
+      return res.status(400).json({
+        status: false,
+        message: "Product size not found",
+      });
+    }
+
+    const productColor =
+      await db`SELECT * FROM product WHERE product_id = ${product_id} AND product_color LIKE ${`%${product_color}%`}`;
+    if (!productColor.length) {
+      return res.status(400).json({
+        status: false,
+        message: "Product color not found",
+      });
+
+
+    // console.log(get_address[address_id]);
+
+    const seller_id = getProduct[0].seller_id;
+    const addressId = get_address[address_id];
+
+    const productPrice = getProduct[0].product_price;
     const seller_id = get_product[0]?.seller_id;
     const address_id = get_address[0]?.address_id;
     const productPrice = get_product[0]?.product_price;
-
     const shipping_price = 20000;
-
     const totalPrice = productPrice * total_product + shipping_price;
+    console.log(totalPrice);
 
     const payload = {
-      product_id,
+      product_id: getProduct[0].product_id,
       product_size,
       product_color,
-      user_id: id,
+      user_id: user_id,
       total_product,
       shipping_price: shipping_price,
       seller_id: seller_id,
+      address_id: addressId.address_id,
       address_id: address_id? address_id: null,
       total_price: totalPrice,
     };
 
-    data = await db`INSERT INTO product_order ${db(
-      payload,
-      "product_id",
-      "total_product",
-      "user_id",
-      "seller_id",
-      "product_size",
-      "product_color",
-      "total_price",
-      "address_id",
-      "shipping_price"
-    )} returning *`;
+    data = await modelOrder.addOrder(payload);
 
     res.json({
       status: true,
@@ -102,37 +135,197 @@ async function createOrder(req, res) {
   }
 }
 
+async function getAllOrder(req, res) {
+  try {
+    const token = getToken(req);
+    const decoded = jwt.verify(token, process.env.PRIVATE_KEY);
+    const user_id = decoded.user_id;
+
+    const query = await modelOrder.getOrderWithAddress(user_id);
+
+    res.json({
+      status: true,
+      message: "Get data success",
+      data: query,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(400).json({
+      status: false,
+      message: "Error not found",
+    });
+  }
+}
+
+async function editOrder(req, res) {
+  try {
+    const token = getToken(req);
+    const decoded = jwt.verify(token, process.env.PRIVATE_KEY);
+    const user_id = decoded.user_id;
+
+    const { order_id, product_size, product_color, total_product } = req.body;
+
+    if (!order_id) {
+      return res.status(400).json({
+        status: false,
+        message: "All field must be filled",
+      });
+    }
+
+    const checkOrder = await modelOrder.getOrderByOrderId(order_id, user_id);
+
+    const product_id = checkOrder[0].product_id;
+
+    if (!checkOrder.length) {
+      return res.status(400).json({
+        status: false,
+        message: "Order not found",
+      });
+    }
+
+    const checkProduct = await modelProduct.getProductByProductId(product_id);
+    console.log(checkProduct);
+
+    if (!checkProduct.length) {
+      return res.status(400).json({
+        status: false,
+        message: "Product not found",
+      });
+    }
+
+    if (product_size && !checkProduct[0].product_size.includes(product_size)) {
+      return res.status(400).json({
+        status: false,
+        message: "Product size not availabe",
+      });
+    }
+
+    const productColor = checkProduct[0].product_color.toLowerCase();
+    if (product_color && !productColor.includes(product_color.toLowerCase())) {
+      return res.status(400).json({
+        status: false,
+        message: "Product color not available",
+      });
+    }
+
+    if (total_product < 0) {
+      return res.status(400).json({
+        status: false,
+        message: "Total product must be greater than 0",
+      });
+    }
+
+    const payload = {
+      product_size: product_size ?? checkOrder[0].product_size,
+      product_color: product_color ?? checkOrder[0].product_color,
+      total_product: total_product ?? checkOrder[0].total_product,
+    };
+
+    const data = await modelOrder.editOrder(payload, order_id);
+
+    res.json({
+      status: true,
+      message: "Get data success",
+      data: data,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(400).json({
+      status: false,
+      message: "Error not found",
+    });
+  }
+}
+
+async function deleteOrder(req, res) {
+  try {
+    const token = getToken(req);
+    const decoded = jwt.verify(token, process.env.PRIVATE_KEY);
+    const user_id = decoded.user_id;
+    const order_id = req.body.order_id;
+
+    if (!order_id) {
+      return res.status(400).json({
+        status: false,
+        message: "All field must be filled",
+      });
+    }
+
+    const checkOrder = await modelOrder.checkOrder(order_id, user_id);
+
+    if (!checkOrder.length) {
+      return res.status(400).json({
+        status: false,
+        message: "Order not found",
+      });
+    }
+
+    if (checkOrder[0].user_id !== user_id) {
+      return res.status(400).json({
+        status: false,
+        message: "You are not allowed to delete this order",
+      });
+    }
+
+    await modelOrder.deleteOrder(order_id, user_id);
+
+    res.json({
+      status: true,
+      message: "Delete order success",
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(400).json({
+      status: false,
+      message: "Error not found",
+    });
+  }
+}
+
 async function createPayment(req, res) {
   try {
     const totalPaymentBody = req?.body?.total_payment;
     const token = getToken(req);
     const decoded = jwt.verify(token, process.env.PRIVATE_KEY);
-    const id = decoded.user_id;
+    const user_id = decoded.user_id;
 
-    get_customer = await db`SELECT * FROM users WHERE user_id = ${id}`;
+    const get_customer = await modelUser.getProfileById(user_id);
+    console.log(get_customer);
 
-    get_order = await db`SELECT * FROM product_order WHERE user_id = ${id}`;
+    const get_order = await modelOrder.getOrder(user_id);
+    // console.log(get_order);
 
-    get_price =
-      await db`SELECT SUM(CAST(product_order.total_price AS NUMERIC)) as total_price_sum 
-      FROM product_order WHERE user_id = ${id}`;
+    if (!get_order.length) {
+      return res.status(400).json({
+        status: false,
+        message: "Order not found",
+      });
+    }
+
+    const get_price = await modelOrder.getPrice(user_id);
+    // console.log(get_price);
 
     totalPayment = get_price[0].total_price_sum;
 
     const payload = {
+
+      user_id: user_id,
+      total_payment: totalPayment,
+
       user_id: id,
       total_payment: totalPaymentBody,
     };
 
-    data = await db`INSERT INTO payment ${db(
-      payload,
-      "user_id",
-      "total_payment"
-    )} returning *`;
+    const data = await modelOrder.insertPayment(payload);
+
+
+    const get_payment_id = await modelOrder.getPaymentId(user_id);
+    const getPaymentId = get_payment_id[0].payment_id;
 
     get_payment_id =
       await db`SELECT payment.payment_id FROM payment WHERE user_id= ${id}`;
     getPaymentId = 'CODECRAFTERS' + get_payment_id[0].payment_id;
+
 
     let snap = new midtransClient.Snap({
       // Set to true if you want Production Environment (accept real transaction).
@@ -158,7 +351,35 @@ async function createPayment(req, res) {
       const payload = {
         transaction_token: transactionToken,
       };
+      const data = await modelOrder.updatePaymentToken(payload);
+    });
 
+    const url = `https://api.sandbox.midtrans.com/v2/${getPaymentId}/status`;
+    const response = await axios.get(url, {
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Basic ${Buffer.from(
+          process.env.SERVER_KEY + ":"
+        ).toString("base64")}`,
+      },
+    });
+    const payment_status = response.data.status_message;
+
+    const payloadStatus = {
+      status: payment_status,
+    };
+
+    const checkStatusPayment = await modelOrder.checkStatus(payloadStatus);
+
+    res.send({
+      status: true,
+      message: "Success Create payment",
+      data: {
+        payment_id: getPaymentId,
+        payment_status: payment_status,
+      },
+    });
       data = await db`UPDATE payment SET ${db(
         payload,
         "transaction_token"
@@ -185,9 +406,8 @@ async function checkStatus(req, res) {
   try {
     const token = getToken(req);
     const decoded = jwt.verify(token, process.env.PRIVATE_KEY);
-    const id = decoded.user_id;
-    paymentId =
-      await db`SELECT payment.payment_id FROM payment WHERE user_id = ${id}`;
+    const user_id = decoded.user_id;
+    paymentId = await modelOrder.getPaymentId(user_id);
     payment_id = paymentId[0].payment_id;
     const url = `https://api.sandbox.midtrans.com/v2/${payment_id}/status`;
     const response = await axios.get(url, {
@@ -200,23 +420,29 @@ async function checkStatus(req, res) {
       },
     });
 
-    payment_status = response.data.status_message;
+    const payment_status = response.data.status_message;
 
-    const payload = {
+    const payloadStatus = {
       status: payment_status,
     };
 
-    data = await db`UPDATE payment SET ${db(payload, "status")} returning *`;
+    const data = await modelOrder.checkStatus(payloadStatus);
 
     res.status(200).json(response.data);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Error fetching order status" });
+    res.status(500).json({
+      status: false,
+      message: "Internal Server Error",
+    });
   }
 }
 
 module.exports = {
+  getAllOrder,
   createOrder,
   createPayment,
   checkStatus,
+  deleteOrder,
+  editOrder,
 };

@@ -2,6 +2,7 @@ const db = require("../connection");
 const model = require("../models/users.models");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const modelAuth = require("../models/auth.models");
 
 async function loginCustomer(req, res) {
   await loginUser(req, res, 1); // Pass 1 as the role_id for customers
@@ -23,8 +24,7 @@ async function loginUser(req, res, role_id) {
       return;
     }
 
-    const checkEmail =
-      await db`SELECT * FROM users WHERE LOWER(user_email) = LOWER(${user_email}) AND roles_id = ${role_id}`;
+    const checkEmail = await modelAuth.checkEmailRoles(user_email, role_id);
 
     if (!checkEmail?.length) {
       res.status(400).json({
