@@ -75,17 +75,35 @@ async function createOrder(req, res) {
       });
     }
 
+    const productSize =
+      await db`SELECT * FROM product WHERE product_id = ${product_id} AND product_size LIKE ${`%${product_size}%`}`;
+    if (!productSize.length) {
+      return res.status(400).json({
+        status: false,
+        message: "Product size not found",
+      });
+    }
+
+    const productColor =
+      await db`SELECT * FROM product WHERE product_id = ${product_id} AND product_color LIKE ${`%${product_color}%`}`;
+    if (!productColor.length) {
+      return res.status(400).json({
+        status: false,
+        message: "Product color not found",
+      });
+
+
     // console.log(get_address[address_id]);
 
     const seller_id = getProduct[0].seller_id;
     const addressId = get_address[address_id];
 
     const productPrice = getProduct[0].product_price;
-
+    const seller_id = get_product[0]?.seller_id;
+    const address_id = get_address[0]?.address_id;
+    const productPrice = get_product[0]?.product_price;
     const shipping_price = 20000;
-
     const totalPrice = productPrice * total_product + shipping_price;
-
     console.log(totalPrice);
 
     const payload = {
@@ -97,6 +115,7 @@ async function createOrder(req, res) {
       shipping_price: shipping_price,
       seller_id: seller_id,
       address_id: addressId.address_id,
+      address_id: address_id? address_id: null,
       total_price: totalPrice,
     };
 
@@ -111,7 +130,7 @@ async function createOrder(req, res) {
     console.log(error);
     res.status(400).json({
       status: false,
-      message: "Error not found",
+      message: error.message,
     });
   }
 }
@@ -265,6 +284,7 @@ async function deleteOrder(req, res) {
 
 async function createPayment(req, res) {
   try {
+    const totalPaymentBody = req?.body?.total_payment;
     const token = getToken(req);
     const decoded = jwt.verify(token, process.env.PRIVATE_KEY);
     const user_id = decoded.user_id;
@@ -288,16 +308,24 @@ async function createPayment(req, res) {
     totalPayment = get_price[0].total_price_sum;
 
     const payload = {
+
       user_id: user_id,
       total_payment: totalPayment,
+
+      user_id: id,
+      total_payment: totalPaymentBody,
     };
 
     const data = await modelOrder.insertPayment(payload);
 
+
     const get_payment_id = await modelOrder.getPaymentId(user_id);
     const getPaymentId = get_payment_id[0].payment_id;
 
-    // console.log(get_payment_id);
+    get_payment_id =
+      await db`SELECT payment.payment_id FROM payment WHERE user_id= ${id}`;
+    getPaymentId = 'CODECRAFTERS' + get_payment_id[0].payment_id;
+
 
     let snap = new midtransClient.Snap({
       // Set to true if you want Production Environment (accept real transaction).
@@ -307,7 +335,7 @@ async function createPayment(req, res) {
     let parameter = {
       transaction_details: {
         order_id: getPaymentId,
-        gross_amount: totalPayment,
+        gross_amount: totalPaymentBody,
       },
       customer_details: {
         first_name: get_customer[0].user_name,
@@ -352,6 +380,19 @@ async function createPayment(req, res) {
         payment_status: payment_status,
       },
     });
+      data = await db`UPDATE payment SET ${db(
+        payload,
+        "transaction_token"
+      )} returning *`;
+
+      res.send({
+        status: true,
+        message: "Success Create payment",
+        token: transactionToken,
+      });
+      
+    });
+    
   } catch (error) {
     console.log(error);
     res.status(500).json({
