@@ -54,9 +54,9 @@ const deleteAddress = async (adds_id, user_id) => {
   }
 };
 
-const getAddressById = async (address_id) => {
+const getAddressById = async (adds_id) => {
   try {
-    const query = db`SELECT * FROM address WHERE address_id = ${address_id}`;
+    const query = db`SELECT * FROM address WHERE address_id = ${adds_id}`;
     return query;
   } catch (error) {
     return error;

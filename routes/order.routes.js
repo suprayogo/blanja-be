@@ -8,7 +8,7 @@ router.get("/order", middleware, orderController.getAllOrder);
 
 router.post("/product/createOrder", middleware, orderController.createOrder);
 
-router.patch("/order/edit-order", middleware, orderController.editOrder);
+router.patch("/editorder", middleware, orderController.editOrder);
 
 router.delete("/order/delete-order", middleware, orderController.deleteOrder);
 

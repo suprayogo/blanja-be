@@ -46,7 +46,6 @@ async function insertAddress(req, res) {
       city,
     } = req.body;
 
-    // validasi input
     if (
       !(
         address_name &&
@@ -60,6 +59,65 @@ async function insertAddress(req, res) {
       res.status(400).json({
         status: false,
         message: "Bad input, please complete all of fields",
+      });
+      return;
+    }
+
+    if (address_name.length < 3 || address_name.length > 50) {
+      res.status(400).json({
+        status: false,
+        message: "Address name must be 3-50 characters",
+      });
+      return;
+    }
+
+    if (recipient_name.length < 3 || recipient_name.length > 50) {
+      res.status(400).json({
+        status: false,
+        message: "Recipient name must be 3-50 characters",
+      });
+      return;
+    }
+
+    if (address_data.length < 3 || address_data.length > 50) {
+      res.status(400).json({
+        status: false,
+        message: "Address data must be 3-50 characters",
+      });
+      return;
+    }
+
+    if (isNaN(recipient_phone_number)) {
+      res.status(400).json({
+        status: false,
+        message: "Phone number must be number",
+      });
+      return;
+    }
+
+    if (
+      recipient_phone_number.length < 10 ||
+      recipient_phone_number.length > 13
+    ) {
+      res.status(400).json({
+        status: false,
+        message: "Phone number must be 10-13 digits",
+      });
+      return;
+    }
+
+    if (isNaN(postal_code)) {
+      res.status(400).json({
+        status: false,
+        message: "Postal code must be number",
+      });
+      return;
+    }
+
+    if (postal_code.length < 5 || postal_code.length > 10) {
+      res.status(400).json({
+        status: false,
+        message: "Postal code must be 5-10 digits",
       });
       return;
     }
@@ -107,8 +165,7 @@ async function editAddress(req, res) {
     } = req?.body;
 
     // validasi input
-
-    if (address_name.length < 3 || address_name.length > 50) {
+    if (address_name && (address_name.length < 3 || address_name.length > 50)) {
       res.status(400).json({
         status: false,
         message: "Address name must be 3-50 characters",
@@ -116,7 +173,10 @@ async function editAddress(req, res) {
       return;
     }
 
-    if (recipient_name.length < 3 || recipient_name.length > 50) {
+    if (
+      recipient_name &&
+      (recipient_name.length < 3 || recipient_name.length > 50)
+    ) {
       res.status(400).json({
         status: false,
         message: "Recipient name must be 3-50 characters",
@@ -124,7 +184,7 @@ async function editAddress(req, res) {
       return;
     }
 
-    if (address_data.length < 3 || address_data.length > 50) {
+    if (address_data && (address_data.length < 3 || address_data.length > 50)) {
       res.status(400).json({
         status: false,
         message: "Address data must be 3-50 characters",
@@ -132,14 +192,23 @@ async function editAddress(req, res) {
       return;
     }
 
-    if (phone_number.length < 10 || phone_number.length > 13) {
-      res.status(400).json({
-        status: false,
-        message: "Phone number must be 10-13 digits",
-      });
-      return;
+    if (phone_number) {
+      if (isNaN(phone_number)) {
+        res.status(400).json({
+          status: false,
+          message: "Phone number must be a number",
+        });
+        return;
+      } else if (phone_number.length < 10 || phone_number.length > 13) {
+        res.status(400).json({
+          status: false,
+          message: "Phone number must be 10-13 digits",
+        });
+        return;
+      }
     }
-    if (postal_code.length < 5 || postal_code.length > 10) {
+
+    if (postal_code && (postal_code.length < 5 || postal_code.length > 10)) {
       res.status(400).json({
         status: false,
         message: "Postal code must be 5-10 digits",
@@ -147,7 +216,8 @@ async function editAddress(req, res) {
       return;
     }
 
-    const data = await modelAddress.getAddress(user_id, adds_id);
+    const data = await modelAddress.getAddress(user_id);
+    // console.log(data);
 
     if (!data.length) {
       res.status(404).json({
@@ -158,7 +228,7 @@ async function editAddress(req, res) {
     }
 
     const addressIds = data.map((row) => row.address_id);
-    console.log(addressIds);
+    // console.log(addressIds);
 
     if (!addressIds.includes(adds_id)) {
       res.status(400).json({
@@ -168,13 +238,16 @@ async function editAddress(req, res) {
       return;
     }
 
+    const dataAddress = await modelAddress.getAddressById(adds_id);
+
     const payload = {
-      address_name: address_name,
-      recipient_name: recipient_name,
-      recipient_phone_number: phone_number,
-      address_data: address_data,
-      postal_code: postal_code,
-      city: city,
+      address_name: address_name || dataAddress[0].address_name,
+      recipient_name: recipient_name || dataAddress[0].recipient_name,
+      recipient_phone_number:
+        phone_number || dataAddress[0].recipient_phone_number,
+      address_data: address_data || dataAddress[0].address_data,
+      postal_code: postal_code || dataAddress[0].postal_code,
+      city: city || dataAddress[0].city,
     };
 
     const query = await modelAddress.editAddress(payload, adds_id, user_id);

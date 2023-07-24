@@ -8,7 +8,7 @@ const modelProduct = require("../models/product.models");
 
 const jwt = require("jsonwebtoken");
 const midtransClient = require("midtrans-client");
-const { r } = require("tar");
+const { get } = require("../routes/order.routes");
 
 function getToken(req) {
   const token = req?.headers?.authorization?.slice(
@@ -24,16 +24,21 @@ async function createOrder(req, res) {
     const decoded = jwt.verify(token, process.env.PRIVATE_KEY);
     const user_id = decoded.user_id;
 
-    const { product_id, product_size, product_color, total_product } = req.body;
+    const { product_id, product_size, product_color, total_product, adds_id } =
+      req.body;
 
-    if (!product_id || !product_size || !product_color || !total_product) {
+    if (
+      !product_id ||
+      !product_size ||
+      !product_color ||
+      !total_product ||
+      !adds_id
+    ) {
       return res.status(400).json({
         status: false,
         message: "All field must be filled",
       });
     }
-
-    const address_id = Number(req.body.address_id);
 
     const getProduct = await model.getProductByProductId(product_id);
 
@@ -44,7 +49,10 @@ async function createOrder(req, res) {
       });
     }
 
-    if (!getProduct[0].product_size.includes(product_size)) {
+    console.log(getProduct[0].product_size);
+    console.log(product_size);
+
+    if (!getProduct[0].product_size.split(", ").includes(product_size)) {
       return res.status(400).json({
         status: false,
         message: "Product size not availabe",
@@ -66,7 +74,8 @@ async function createOrder(req, res) {
       });
     }
 
-    get_address = await modelAddress.getAddress(user_id);
+    const get_address = await modelAddress.getAddressById(adds_id);
+    console.log(get_address);
 
     if (!get_address.length) {
       return res.status(400).json({
@@ -75,47 +84,27 @@ async function createOrder(req, res) {
       });
     }
 
-    const productSize =
-      await db`SELECT * FROM product WHERE product_id = ${product_id} AND product_size LIKE ${`%${product_size}%`}`;
-    if (!productSize.length) {
+    if (get_address[0].user_id !== user_id) {
       return res.status(400).json({
         status: false,
-        message: "Product size not found",
+        message: "You are not allowed to use this address",
       });
     }
 
-    const productColor =
-      await db`SELECT * FROM product WHERE product_id = ${product_id} AND product_color LIKE ${`%${product_color}%`}`;
-    if (!productColor.length) {
-      return res.status(400).json({
-        status: false,
-        message: "Product color not found",
-      });
-
-
-    // console.log(get_address[address_id]);
-
     const seller_id = getProduct[0].seller_id;
-    const addressId = get_address[address_id];
-
     const productPrice = getProduct[0].product_price;
-    const seller_id = get_product[0]?.seller_id;
-    const address_id = get_address[0]?.address_id;
-    const productPrice = get_product[0]?.product_price;
     const shipping_price = 20000;
     const totalPrice = productPrice * total_product + shipping_price;
-    console.log(totalPrice);
 
     const payload = {
       product_id: getProduct[0].product_id,
-      product_size,
-      product_color,
+      product_size: product_size,
+      product_color: product_color,
       user_id: user_id,
-      total_product,
+      total_product: total_product,
       shipping_price: shipping_price,
       seller_id: seller_id,
-      address_id: addressId.address_id,
-      address_id: address_id? address_id: null,
+      address_id: adds_id,
       total_price: totalPrice,
     };
 
@@ -130,7 +119,7 @@ async function createOrder(req, res) {
     console.log(error);
     res.status(400).json({
       status: false,
-      message: error.message,
+      message: "Error not found",
     });
   }
 }
@@ -173,9 +162,6 @@ async function editOrder(req, res) {
     }
 
     const checkOrder = await modelOrder.getOrderByOrderId(order_id, user_id);
-
-    const product_id = checkOrder[0].product_id;
-
     if (!checkOrder.length) {
       return res.status(400).json({
         status: false,
@@ -183,8 +169,9 @@ async function editOrder(req, res) {
       });
     }
 
+    const product_id = checkOrder[0].product_id;
+
     const checkProduct = await modelProduct.getProductByProductId(product_id);
-    console.log(checkProduct);
 
     if (!checkProduct.length) {
       return res.status(400).json({
@@ -193,7 +180,10 @@ async function editOrder(req, res) {
       });
     }
 
-    if (product_size && !checkProduct[0].product_size.includes(product_size)) {
+    if (
+      product_size &&
+      !checkProduct[0].product_size.split(", ").includes(product_size)
+    ) {
       return res.status(400).json({
         status: false,
         message: "Product size not availabe",
@@ -214,12 +204,18 @@ async function editOrder(req, res) {
         message: "Total product must be greater than 0",
       });
     }
+    console.log(checkOrder[0].product_color);
 
     const payload = {
-      product_size: product_size ?? checkOrder[0].product_size,
-      product_color: product_color ?? checkOrder[0].product_color,
-      total_product: total_product ?? checkOrder[0].total_product,
+      product_size:
+        product_size !== "" ? product_size : checkOrder[0].product_size,
+      product_color:
+        product_color !== "" ? product_color : checkOrder[0].product_color,
+      total_product:
+        total_product !== "" ? total_product : checkOrder[0].total_product,
     };
+
+    console.log(payload);
 
     const data = await modelOrder.editOrder(payload, order_id);
 
@@ -252,6 +248,7 @@ async function deleteOrder(req, res) {
     }
 
     const checkOrder = await modelOrder.checkOrder(order_id, user_id);
+    console.log(checkOrder);
 
     if (!checkOrder.length) {
       return res.status(400).json({
@@ -284,7 +281,6 @@ async function deleteOrder(req, res) {
 
 async function createPayment(req, res) {
   try {
-    const totalPaymentBody = req?.body?.total_payment;
     const token = getToken(req);
     const decoded = jwt.verify(token, process.env.PRIVATE_KEY);
     const user_id = decoded.user_id;
@@ -293,7 +289,6 @@ async function createPayment(req, res) {
     console.log(get_customer);
 
     const get_order = await modelOrder.getOrder(user_id);
-    // console.log(get_order);
 
     if (!get_order.length) {
       return res.status(400).json({
@@ -303,29 +298,20 @@ async function createPayment(req, res) {
     }
 
     const get_price = await modelOrder.getPrice(user_id);
-    // console.log(get_price);
 
     totalPayment = get_price[0].total_price_sum;
 
     const payload = {
-
       user_id: user_id,
       total_payment: totalPayment,
-
-      user_id: id,
-      total_payment: totalPaymentBody,
     };
 
     const data = await modelOrder.insertPayment(payload);
 
-
     const get_payment_id = await modelOrder.getPaymentId(user_id);
     const getPaymentId = get_payment_id[0].payment_id;
 
-    get_payment_id =
-      await db`SELECT payment.payment_id FROM payment WHERE user_id= ${id}`;
-    getPaymentId = 'CODECRAFTERS' + get_payment_id[0].payment_id;
-
+    // console.log(get_payment_id);
 
     let snap = new midtransClient.Snap({
       // Set to true if you want Production Environment (accept real transaction).
@@ -335,7 +321,7 @@ async function createPayment(req, res) {
     let parameter = {
       transaction_details: {
         order_id: getPaymentId,
-        gross_amount: totalPaymentBody,
+        gross_amount: totalPayment,
       },
       customer_details: {
         first_name: get_customer[0].user_name,
@@ -380,19 +366,6 @@ async function createPayment(req, res) {
         payment_status: payment_status,
       },
     });
-      data = await db`UPDATE payment SET ${db(
-        payload,
-        "transaction_token"
-      )} returning *`;
-
-      res.send({
-        status: true,
-        message: "Success Create payment",
-        token: transactionToken,
-      });
-      
-    });
-    
   } catch (error) {
     console.log(error);
     res.status(500).json({
