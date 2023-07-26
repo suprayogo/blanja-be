@@ -330,15 +330,13 @@ async function createPayment(req, res) {
       },
     };
 
-    snap.createTransaction(parameter).then(async (transaction) => {
-      // transaction token
-      let transactionToken = transaction.token;
-      // console.log("transactionToken:", transactionToken);
-      const payload = {
-        transaction_token: transactionToken,
-      };
-      const data = await modelOrder.updatePaymentToken(payload);
-    });
+     const transaction = await snap.createTransaction(parameter);
+     const transactionToken = transaction.token;
+
+     const payloadUpdate = {
+       transaction_token: transactionToken,
+     };
+     const updateData = await modelOrder.updatePaymentToken(payloadUpdate);
 
     const url = `https://api.sandbox.midtrans.com/v2/${getPaymentId}/status`;
     const response = await axios.get(url, {
@@ -364,6 +362,7 @@ async function createPayment(req, res) {
       data: {
         payment_id: getPaymentId,
         payment_status: payment_status,
+        transactionToken: transactionToken,
       },
     });
   } catch (error) {
