@@ -370,6 +370,7 @@ async function createPayment(req, res) {
     res.status(500).json({
       status: false,
       message: "Internal Server Error",
+      error: error
     });
   }
 }

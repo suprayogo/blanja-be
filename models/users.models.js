@@ -44,6 +44,22 @@ const insertProfile = async (payload) => {
     return error;
   }
 };
+
+const insertProfileUserss = async (payload) => {
+  try {
+    const query = await db`INSERT INTO userss ${db(
+      payload,
+      "user_id",
+      "user_name",
+    )} returning *`;
+
+    console.log(query);
+    return query;
+  } catch (error) {
+    return error;
+  }
+};
+
 const editCustomer = async (payload, user_id) => {
   try {
     const query = await db`UPDATE users SET ${db(
