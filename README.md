@@ -4,6 +4,10 @@
 
 Blanja is a platform for buying and selling fashion products.
 
+## Introduction
+
+Blanja is an e-commerce platform that allows users to buy and sell products online. This repository contains the backend code that handles various operations, including user authentication, product management, order processing, and more.
+
 # Features
 
 - Login/Register ( Customer / Seller )
@@ -49,38 +53,67 @@ Prerequisites
 
 # The API endpoints are:
 
-User Route :
-get /users getUsers;
-post /register/customer registerCustomer
-post /register/seller registerSeller
-patch /edit/customer editCustomer
-patch /edit/seller editSeller
-delete /users deleteUsers
-patch /users/photo editUsersPhoto
+### User Route
 
-Auth Route :
-post /customer/login loginCustomer
-post /seller/login loginSeller
+- `GET /users` - Get all users.
+- `POST /register/customer` - Register a new customer.
+- `POST /register/seller` - Register a new seller.
+- `PATCH /edit/customer` - Edit customer data.
+- `PATCH /edit/seller` - Edit seller data.
+- `DELETE /users` - Delete users.
+- `PATCH /users/photo` - Edit user photo.
 
-Product Route :
-get /product getProduct
-get /product/:id getProductById
-get /category getCategory
-post /product insertProduct
-get /seller/product getProductByJwt
-patch /product editProduct
-delete /product deleteProduct
+### Auth Route
 
-Address Route :
-get /address getAddressJwt
-post /customer/address insertAddress
-patch /address/edit_address editAddress
-delete /address/delete_address deleteAddress
+- `POST /customer/login` - Login for customers.
+- `POST /seller/login` - Login for sellers.
 
-Order Route :
-get /order getAllOrder
-post /product/createOrder createOrder
-patch /editorder editOrder
-delete /order/delete-order deleteOrder
-post /create-payment createPayment
-get /check-status checkStatus
+### Product Route
+
+- `GET /product` - Get all products.
+- `GET /product/:id` - Get a product by ID.
+- `GET /category` - Get all product categories.
+- `POST /product` - Insert a new product.
+- `GET /seller/product` - Get products by seller (using JWT).
+- `PATCH /product` - Edit a product.
+- `DELETE /product` - Delete a product.
+
+### Address Route
+
+- `GET /address` - Get addresses using JWT.
+- `POST /customer/address` - Insert a new address for a customer.
+- `PATCH /address/edit_address` - Edit address.
+- `DELETE /address/delete_address` - Delete address.
+
+### Order Route
+
+- `GET /order` - Get all orders.
+- `POST /product/createOrder` - Create a new order.
+- `PATCH /editorder` - Edit an order.
+- `DELETE /order/delete-order` - Delete an order.
+
+### Payment Route
+
+- `POST /create-payment` - Create a new payment.
+- `GET /check-status` - Check payment status.
+
+Feel free to explore the API endpoints to understand how to interact with the Blanja backend.
+
+[ Api Deploy ] : https://rich-teal-camel-tutu.cyclic.app
+
+## Endpoint List Postman
+
+[![Run in Postman](https://run.pstmn.io/button.svg)](https://elements.getpostman.com/redirect?entityId=26602283-18309b59-06d3-4af9-a33e-a95d7c6a0f1a&entityType=collection)
+
+## Related Project
+
+- [Blanja ](https://github.com/nluthfis/blanja-fe)
+- [Blanja Demo](blanja-fe-theta.vercel.app)
+
+## Authors
+
+Contributors names and contact info:
+
+1. Naufal Luthfi Saputra
+
+- [Linkedin](https://www.linkedin.com/in/naufal-luthfi-saputra/)
