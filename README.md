@@ -108,7 +108,7 @@ Feel free to explore the API endpoints to understand how to interact with the Bl
 ## Related Project
 
 - [Blanja ](https://github.com/nluthfis/blanja-fe)
-- [Blanja Demo](blanja-fe-theta.vercel.app)
+- [Blanja Demo](https://blanja-fe-theta.vercel.app)
 
 ## Authors
 
