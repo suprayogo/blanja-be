@@ -117,3 +117,7 @@ Contributors names and contact info:
 1. Naufal Luthfi Saputra
 
 - [Linkedin](https://www.linkedin.com/in/naufal-luthfi-saputra/)
+
+2. Irham Nofrianda
+
+- [Linkedin](https://www.linkedin.com/in/irhamnfrnda/)
