@@ -2,6 +2,11 @@
 
 
 <h3 align="center">Blanja API</h3>
+<p align="center">
+  <a href="https://rich-teal-camel-tutu.cyclic.app">View API Demo</a>
+  ·
+  <a href="https://github.com/suprayogo/blanja-be/issues">Report Bug</a>
+</p>
 
 
 # This Repository is about Blanja Backend build with Express.js, PostgreSQL and Midtrans for the transaction
@@ -119,12 +124,13 @@ Feel free to explore the API endpoints to understand how to interact with the Bl
 
 ## Related Project
 
-- [Blanja ](https://github.com/IrhamNfrnda/blanja-fe)
+- [Blanja FE ](https://github.com/suprayogo/blanja-fe)
 - [Blanja Demo](https://blanja-fe-theta.vercel.app)
+- [Blanja API]( https://rich-teal-camel-tutu.cyclic.app)
 
 ## Authors
 
-Contributors names and contact info project team in backend:
+Contributors names and contact info project team in blanja backend:
 
 1. Naufal Luthfi Saputra
 
