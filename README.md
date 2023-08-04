@@ -1,5 +1,9 @@
 # Blanja Backend
 
+
+<h3 align="center">Blanja API</h3>
+
+
 # This Repository is about Blanja Backend build with Express.js, PostgreSQL and Midtrans for the transaction
 
 Blanja is a platform for buying and selling fashion products.
@@ -38,7 +42,7 @@ Prerequisites
 # Installing:
 
 - Clone the repository
-- git clone https://github.com/nluthfis/PijarFood
+- git clone https://github.com/suprayogo/blanja-be.git
 
 # Install dependencies:
 
@@ -46,6 +50,14 @@ Prerequisites
 - Start the server
 - npm start
 - The API will be running on port 4000.
+
+
+
+## Endpoint List
+
+[![Run in Postman](https://run.pstmn.io/button.svg)](https://elements.getpostman.com/redirect?entityId=26602283-18309b59-06d3-4af9-a33e-a95d7c6a0f1a&entityType=collection)
+
+
 
 # The API endpoints are:
 
