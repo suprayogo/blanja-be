@@ -124,7 +124,7 @@ Feel free to explore the API endpoints to understand how to interact with the Bl
 
 ## Authors
 
-Contributors names and contact info:
+Contributors names and contact info project team in backend:
 
 1. Naufal Luthfi Saputra
 
